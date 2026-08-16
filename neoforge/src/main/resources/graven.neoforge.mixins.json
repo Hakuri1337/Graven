@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "tech.hakuri.graven.neoforge.mixins",
+  "plugin": "tech.hakuri.graven.neoforge.mixins.NeoForgeMixinPlugin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "MixinCamera",
+    "MixinMinecraft",
+    "sodium.MixinSodiumAbstractBlockRenderContext"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

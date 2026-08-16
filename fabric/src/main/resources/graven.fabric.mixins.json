@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "tech.hakuri.graven.fabric.mixins",
+  "plugin": "tech.hakuri.graven.fabric.mixins.FabricMixinPlugin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "sodium.MixinSodiumAbstractBlockRenderContext"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,77 @@
+package tech.hakuri.graven.modules.impl.movement;
+
+import tech.hakuri.graven.events.bus.EventHandler;
+import tech.hakuri.graven.events.impl.KeyboardInputEvent;
+import tech.hakuri.graven.events.impl.PacketEvent;
+import tech.hakuri.graven.events.impl.RightClickEvent;
+import tech.hakuri.graven.events.impl.TravelEvent;
+import tech.hakuri.graven.modules.Category;
+import tech.hakuri.graven.modules.Module;
+import tech.hakuri.graven.settings.impl.EnumSetting;
+import tech.hakuri.graven.utils.network.PacketUtils;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+
+public class Stuck extends Module {
+
+    public static final Stuck INSTANCE = new Stuck();
+
+    private final EnumSetting<Mode> mode = enumSetting("Mode", Mode.NoPacket);
+
+    private Stuck() {
+        super("Stuck", Category.MOVEMENT);
+    }
+
+    private float lastYaw;
+    private float lastPitch;
+
+    private enum Mode {
+        NoPacket,
+        CancelMove
+    }
+
+    @Override
+    protected void onDisable() {
+        if (!nullCheck() && mode.is(Mode.NoPacket) && !mc.player.onGround()) {
+            PacketUtils.sendSilently(new ServerboundMovePlayerPacket.PosRot(mc.player.getX() + 1337, mc.player.getY(), mc.player.getZ() + 1337, mc.player.getYRot() + 0.01f, mc.player.getXRot(), mc.player.onGround(), mc.player.horizontalCollision));
+        }
+    }
+
+    @EventHandler
+    private void onKeyboardInput(KeyboardInputEvent event) {
+        event.setForward(0);
+        event.setStrafe(0);
+    }
+
+    @EventHandler
+    private void onPacket(PacketEvent.Send event) {
+        if (mode.is(Mode.NoPacket)) {
+            if (event.getPacket() instanceof ServerboundMovePlayerPacket || (event.getPacket() instanceof ClientboundSetEntityMotionPacket setEntityMotionPacket && setEntityMotionPacket.id() == mc.player.getId())) {
+                event.cancel();
+            }
+        }
+        if (event.getPacket() instanceof ClientboundPlayerPositionPacket) {
+            toggle();
+        }
+    }
+
+    @EventHandler
+    private void onTravel(TravelEvent event) {
+        if (mode.is(Mode.CancelMove) && mc.player.positionReminder < 19) {
+            event.cancel();
+        }
+    }
+
+    @EventHandler
+    private void onInteract(RightClickEvent event) {
+        if (mode.is(Mode.NoPacket)) {
+            if (mc.player.getYRot() != lastYaw || mc.player.getXRot() != lastPitch) {
+                PacketUtils.sendSilently(new ServerboundMovePlayerPacket.Rot(mc.player.getYRot(), mc.player.getXRot(), mc.player.onGround(), mc.player.horizontalCollision));
+            }
+            lastPitch = mc.player.getXRot();
+            lastYaw = mc.player.getYRot();
+        }
+    }
+
+}

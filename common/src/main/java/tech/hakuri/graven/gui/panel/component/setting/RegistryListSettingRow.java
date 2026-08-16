@@ -1,0 +1,46 @@
+package tech.hakuri.graven.gui.panel.component.setting;
+
+import com.github.slmpc.lumingraphics.ui.text.UiTextMetrics;
+import com.github.slmpc.lumingraphics.text.icon.IconChars;
+
+
+import com.github.slmpc.lumingraphics.ui.geometry.UiRect;
+import com.github.slmpc.lumingraphics.ui.tree.UiTree;
+import tech.hakuri.graven.gui.panel.component.PanelElements;
+import tech.hakuri.graven.gui.panel.component.SettingRow;
+import tech.hakuri.graven.gui.theme.MD3Theme;
+import tech.hakuri.graven.gui.theme.GravenUiTheme;
+import tech.hakuri.graven.gui.utils.RegistryListUi;
+import tech.hakuri.graven.settings.impl.RegistryListSetting;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
+
+public class RegistryListSettingRow extends SettingRow<RegistryListSetting<?>> {
+
+    public RegistryListSettingRow(RegistryListSetting<?> setting) {
+        super(setting);
+    }
+
+    @Override
+    public void buildUi(UiTree.Scope scope, GuiGraphicsExtractor guiGraphics, UiTextMetrics textRenderer,
+                        UiRect bounds, float hoverProgress, int mouseX, int mouseY, float partialTick) {
+        float labelScale = 0.68f;
+        float labelY = (bounds.height() - textRenderer.textHeight(labelScale, null)) / 2.0f;
+        String summary = setting.size() + RegistryListUi.labelText(setting.getRegistryType());
+        float chipTextScale = 0.58f;
+
+        scope.roundRect(0.0f, 0.0f, bounds.width(), bounds.height(), MD3Theme.CARD_RADIUS, MD3Theme.rowSurface(hoverProgress));
+        scope.text(setting.getDisplayName(), MD3Theme.ROW_CONTENT_INSET, labelY, labelScale, MD3Theme.TEXT_PRIMARY);
+
+        UiRect chipBounds = PanelElements.measureAssistChipBounds(textRenderer, bounds, summary,
+                chipTextScale, 8.0f, 12.0f, 94.0f).relativeTo(bounds);
+        scope.chip(chipBounds, summary, chipTextScale, GravenUiTheme.lumin(MD3Theme.SECONDARY_CONTAINER),
+                GravenUiTheme.lumin(MD3Theme.ON_SECONDARY_CONTAINER),
+                IconChars.ADD, 0.58f, "graven-icons");
+    }
+
+    @Override
+    public boolean mouseClicked(UiRect bounds, MouseButtonEvent event, boolean isDoubleClick) {
+        return bounds.contains(event.x(), event.y()) && event.button() == 0;
+    }
+}

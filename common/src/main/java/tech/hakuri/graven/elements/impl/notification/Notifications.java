@@ -1,0 +1,387 @@
+package tech.hakuri.graven.elements.impl.notification;
+
+import tech.hakuri.graven.elements.HudModule;
+import tech.hakuri.graven.gui.hudeditor.HudEditorScreen;
+import tech.hakuri.graven.gui.theme.OpalHudStyle;
+import com.github.slmpc.lumingraphics.ui.tree.UiTree;
+import com.github.slmpc.lumingraphics.text.icon.IconChars;
+import tech.hakuri.graven.managers.Managers;
+import tech.hakuri.graven.settings.impl.BoolSetting;
+import tech.hakuri.graven.settings.impl.DoubleSetting;
+import tech.hakuri.graven.settings.impl.EnumSetting;
+import tech.hakuri.graven.settings.impl.IntSetting;
+import tech.hakuri.graven.utils.render.animation.Easing;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.util.Mth;
+
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Notifications extends HudModule {
+
+    public static final Notifications INSTANCE = new Notifications();
+
+    private Notifications() {
+        super("Notifications", 3.2f, 3.2f, DEFAULT_BOX_WIDTH, DEFAULT_BOX_HEIGHT);
+    }
+
+    private final DoubleSetting scale = doubleSetting("Scale", 1.0, 0.5, 2.0, 0.05);
+    private final DoubleSetting fontScale = doubleSetting("Font Scale", 0.80, 0.5, 2.0, 0.05);
+    private final DoubleSetting subtitleYOffset = doubleSetting("Subtitle Y Offset", 0.4, -10.0, 20.0, 0.1);
+    private final IntSetting boxWidth = intSetting("Width", DEFAULT_BOX_WIDTH, 80, 300, 1);
+    private final IntSetting boxHeight = intSetting("Height", DEFAULT_BOX_HEIGHT, 24, 80, 1);
+    private final IntSetting backgroundAlpha = intSetting("Background Alpha", 145, 0, 255, 1);
+    public final IntSetting displayTime = intSetting("Display Time", 2000, 500, 5000, 100);
+    private final EnumSetting<OpalDisplayMode> opalDisplayMode = enumSetting(
+            "Opal Display Mode", OpalDisplayMode.Legacy, OpalHudStyle::active);
+    private final BoolSetting opalIconBackground = boolSetting(
+            "Opal Icon Background", true,
+            () -> OpalHudStyle.active() && opalDisplayMode.is(OpalDisplayMode.Island));
+
+    private static final int DEFAULT_BOX_WIDTH = 120;
+    private static final int DEFAULT_BOX_HEIGHT = 30;
+    private static final float ACCENT_BAR_WIDTH = 2.4f;
+    private static final float TEXT_PADDING = 6.0f;
+    private static final float ENTRY_GAP = 3.0f;
+    private static final float LINE_GAP = 1.8f;
+    private static final float SUBTITLE_SCALE = 0.92f;
+
+
+    @Override
+    public void render(DeltaTracker deltaTracker) {
+        Managers.NOTIFICATION.update();
+        Notification previewNotification = createPreviewNotification();
+
+        if (OpalHudStyle.active()) {
+            if (opalDisplayMode.is(OpalDisplayMode.Island)) {
+                setBounds(DEFAULT_BOX_WIDTH, DEFAULT_BOX_HEIGHT);
+                return;
+            }
+            renderOpalLegacy(previewNotification);
+            return;
+        }
+
+        if (Managers.NOTIFICATION.isEmpty() && previewNotification == null) return;
+
+        UiTree.Scope scope = renderScope();
+
+        float s = scale.getValue().floatValue();
+        float textScale = fontScale.getValue().floatValue() * s;
+        float anchorWidth = boxWidth.getValue() * s;
+        float boxHeight = this.boxHeight.getValue() * s;
+        float spacing = boxHeight + ENTRY_GAP * s;
+        int bgAlpha = backgroundAlpha.getValue();
+
+        List<RenderEntry> entries = new ArrayList<>();
+        float totalHeight = 0f;
+
+        for (Notification notification : Managers.NOTIFICATION.getNotifications()) {
+            RenderFrame frame = getRenderFrame(notification, spacing);
+            if (frame.stage == RenderStage.HIDDEN) continue;
+
+            totalHeight += frame.occupiedHeight;
+            entries.add(new RenderEntry(notification, anchorWidth, frame));
+        }
+
+        if (entries.isEmpty() && previewNotification != null) {
+            totalHeight = spacing;
+            entries.add(new RenderEntry(previewNotification, anchorWidth, new RenderFrame(RenderStage.SHOW, 1.0f, spacing)));
+        }
+
+        if (entries.isEmpty()) return;
+
+        float resolvedHeight = Math.max(boxHeight, totalHeight);
+        float currentY = getBaseY(resolvedHeight);
+
+        for (RenderEntry entry : entries) {
+            float renderX = getRenderX(anchorWidth, entry.boxWidth);
+            renderNotification(scope, entry.notification, entry.frame, renderX, currentY, anchorWidth, entry.boxWidth, boxHeight, s, textScale, bgAlpha);
+            currentY += entry.frame.occupiedHeight;
+        }
+
+        setBounds(anchorWidth, boxHeight);
+    }
+
+    public boolean usesIslandNotifications() {
+        return isEnabled() && OpalHudStyle.active() && opalDisplayMode.is(OpalDisplayMode.Island);
+    }
+
+    public boolean showIslandIconBackground() {
+        return opalIconBackground.getValue();
+    }
+
+    private void renderOpalLegacy(Notification previewNotification) {
+        List<Notification> notifications = new ArrayList<>(Managers.NOTIFICATION.getNotifications());
+        if (notifications.isEmpty() && previewNotification != null) {
+            notifications.add(previewNotification);
+        }
+        if (notifications.isEmpty()) return;
+
+        float s = scale.getValue().floatValue();
+        float padding = 3.0f * s;
+        float rowHeight = 21.0f * s;
+        float iconSize = 14.0f * s;
+        float iconOffset = iconSize + padding;
+        float titleScale = 0.54f * s;
+        float descriptionScale = 0.50f * s;
+        float maxWidth = 100.0f * s;
+        List<OpalEntry> entries = new ArrayList<>(notifications.size());
+
+        for (Notification notification : notifications) {
+            float textWidth = Math.max(
+                    textWidth(notification.getTitle(), titleScale, OpalHudStyle.BOLD_FONT) + padding * 4.0f,
+                    textWidth(notification.getSubTitle(), descriptionScale, OpalHudStyle.MEDIUM_FONT));
+            float entryWidth = Math.max(100.0f * s, iconOffset + textWidth);
+            maxWidth = Math.max(maxWidth, entryWidth);
+            entries.add(new OpalEntry(notification, entryWidth));
+        }
+
+        float totalHeight = entries.size() * (rowHeight + padding) + padding;
+        setBounds(maxWidth, totalHeight);
+        UiTree.Scope scope = renderScope();
+        boolean rightAligned = getHorizontalAnchor() == HorizontalAnchor.Right;
+        boolean bottomAligned = getVerticalAnchor() == VerticalAnchor.Bottom;
+
+        for (int index = 0; index < entries.size(); index++) {
+            OpalEntry entry = entries.get(index);
+            Notification notification = entry.notification();
+            float slideProgress = opalSlideProgress(notification, previewNotification == notification);
+            if (slideProgress <= 0.001f) continue;
+
+            float baseX = rightAligned ? x + width - entry.width() : x;
+            float slide = (entry.width() + padding) * (1.0f - slideProgress);
+            float entryX = rightAligned ? baseX + slide : baseX - slide;
+            float entryY = bottomAligned
+                    ? y + height - padding - (index + 1) * (rowHeight + padding)
+                    : y + padding + index * (rowHeight + padding);
+            float radius = 4.0f * s;
+
+            OpalHudStyle.applyBlur(entryX, entryY, entry.width(), rowHeight,
+                    radius, radius, radius, radius);
+            OpalHudStyle.drawSurface(scope, entryX, entryY, entry.width(), rowHeight,
+                    radius, radius, radius, radius, slideProgress);
+
+            float remaining = previewNotification == notification ? 1.0f
+                    : Mth.clamp(1.0f - notification.getElapsedTime()
+                    / (float) Math.max(1, notification.getDisplayTime()), 0.0f, 1.0f);
+            Color modeColor = OpalHudStyle.withAlpha(notification.getMode().getColor(), slideProgress);
+            float progressWidth = Math.max(0.0f, (entry.width() - 0.5f * s) * remaining);
+            if (progressWidth > 0.0f) {
+                scope.roundRectGradient(entryX + 0.5f * s, entryY + rowHeight - 4.0f * s,
+                        progressWidth, 4.0f * s,
+                        0.0f, 0.0f, remaining > 0.95f ? radius : 0.0f, radius,
+                        lumin(OpalHudStyle.withAlpha(modeColor, 0.0f)),
+                        lumin(OpalHudStyle.withAlpha(modeColor, 0.25f)),
+                        lumin(OpalHudStyle.withAlpha(modeColor, 0.25f)),
+                        lumin(OpalHudStyle.withAlpha(modeColor, 0.0f)));
+            }
+
+            float iconBoxX = entryX + padding - 0.5f * s;
+            float iconBoxY = entryY + padding * 0.5f + 0.5f * s;
+            scope.roundRect(iconBoxX, iconBoxY, iconOffset, iconOffset, 2.75f * s,
+                    lumin(OpalHudStyle.withAlpha(OpalHudStyle.darker(modeColor, 0.6f, 1.0f), 0.5f)));
+            String icon = switch (notification.getMode()) {
+                case Success -> IconChars.CHECK;
+                case Info -> IconChars.INFO;
+                case Error -> IconChars.ERROR;
+            };
+            float iconScale = 0.74f * s;
+            float iconX = iconBoxX + (iconOffset - textWidth(icon, iconScale, OpalHudStyle.ICON_FONT)) / 2.0f;
+            float iconY = iconBoxY + (iconOffset - textHeight(iconScale, OpalHudStyle.ICON_FONT)) / 2.0f;
+            scope.text(icon, iconX, iconY, iconScale, lumin(modeColor), OpalHudStyle.ICON_FONT);
+
+            float textX = entryX + padding * 2.0f + iconOffset;
+            scope.text(notification.getTitle(), textX, entryY + padding * 1.8f,
+                    titleScale, lumin(OpalHudStyle.withAlpha(OpalHudStyle.TEXT, slideProgress)),
+                    OpalHudStyle.BOLD_FONT);
+            scope.text(notification.getSubTitle(), textX, entryY + padding * 4.2f,
+                    descriptionScale, lumin(OpalHudStyle.withAlpha(OpalHudStyle.MUTED_TEXT, slideProgress)),
+                    OpalHudStyle.MEDIUM_FONT);
+        }
+    }
+
+    private float opalSlideProgress(Notification notification, boolean preview) {
+        if (preview) return 1.0f;
+        long elapsed = notification.getElapsedTime();
+        if (!notification.shouldSkipIntroAnim() && elapsed < 400L) {
+            return Easing.EASE_OUT_EXPO.getFunction().apply(elapsed / 400.0f);
+        }
+        long exit = notification.getExitTime();
+        if (exit >= 0L) {
+            return 1.0f - Easing.EASE_OUT_EXPO.getFunction().apply(Mth.clamp(exit / 400.0f, 0.0f, 1.0f));
+        }
+        return 1.0f;
+    }
+
+    private float getSubTitleScale(float scale) {
+        return scale * SUBTITLE_SCALE;
+    }
+
+    private float getRenderX(float anchorWidth, float boxWidth) {
+        return getHorizontalAnchor() == HorizontalAnchor.Right ? this.x + anchorWidth - boxWidth
+                : getHorizontalAnchor() == HorizontalAnchor.Center ? this.x + (anchorWidth - boxWidth) / 2.0f
+                  : this.x;
+    }
+
+    private float getBaseY(float totalHeight) {
+        return getVerticalAnchor() == VerticalAnchor.Bottom ? this.y + this.height - totalHeight : this.y;
+    }
+
+    private RenderFrame getRenderFrame(Notification notification, float occupiedHeight) {
+        long elapsedTime = notification.getElapsedTime();
+        if (!notification.shouldSkipIntroAnim()) {
+            if (elapsedTime <= 300L) {
+                float progress = Easing.EASE_OUT_CUBIC.getFunction().apply(elapsedTime / 300.0f);
+                return new RenderFrame(RenderStage.ENTER_BAR, progress, occupiedHeight * progress);
+            }
+
+            if (elapsedTime <= 500L) {
+                float progress = Easing.EASE_OUT_CUBIC.getFunction().apply((elapsedTime - 300L) / 200.0f);
+                return new RenderFrame(RenderStage.ENTER_CONTENT, progress, occupiedHeight);
+            }
+        }
+
+        long exitTime = notification.getExitTime();
+        if (exitTime < 0L) {
+            return new RenderFrame(RenderStage.SHOW, 1.0f, occupiedHeight);
+        }
+
+        if (exitTime <= 200L) {
+            float progress = 1.0f - Easing.EASE_OUT_CUBIC.getFunction().apply(exitTime / 200.0f);
+            return new RenderFrame(RenderStage.EXIT_CONTENT, progress, occupiedHeight);
+        }
+
+        if (exitTime <= 500L) {
+            float progress = 1.0f - Easing.EASE_OUT_CUBIC.getFunction().apply((exitTime - 200L) / 300.0f);
+            return new RenderFrame(RenderStage.EXIT_BAR, progress, occupiedHeight * progress);
+        }
+
+        return new RenderFrame(RenderStage.HIDDEN, 0.0f, 0.0f);
+    }
+
+    private void renderNotification(UiTree.Scope scope, Notification notification, RenderFrame frame, float x, float y, float anchorWidth, float boxWidth, float boxHeight, float scale, float textScale, int bgAlpha) {
+        switch (frame.stage) {
+            case ENTER_BAR, EXIT_BAR -> {
+                renderStage1(scope, notification, x, y, anchorWidth, boxWidth, boxHeight, frame.progress);
+            }
+            case ENTER_CONTENT, EXIT_CONTENT, SHOW -> {
+                renderStage2(scope, notification, x, y, boxWidth, boxHeight, scale, textScale, bgAlpha, frame.progress);
+            }
+            case HIDDEN -> {
+            }
+        }
+    }
+
+    private void renderStage1(UiTree.Scope scope, Notification notification, float x, float y, float anchorWidth, float boxWidth, float boxHeight, float progress) {
+        float width = isLeftDocked() ? boxWidth * progress : boxWidth - anchorWidth * (1.0f - progress);
+        float renderX = isLeftDocked() ? x : x + boxWidth - width;
+        scope.rect(renderX, y, width, boxHeight, lumin(notification.getMode().getColor()));
+    }
+
+    private void renderStage2(UiTree.Scope scope, Notification notification, float x, float y, float boxWidth, float boxHeight, float scale, float textScale, int bgAlpha, float progress) {
+        scope.rect(x, y, boxWidth, boxHeight, lumin(new Color(0, 0, 0, bgAlpha)));
+        boolean requiresScissor = textExceedsBox(notification, boxWidth, boxHeight, scale, textScale);
+        if (requiresScissor) {
+            scope.scissor(x, y, boxWidth, boxHeight,
+                    textScope -> renderText(textScope, notification, x, y, boxWidth, boxHeight,
+                            scale, textScale, Math.round(255.0f * progress)));
+        } else {
+            renderText(scope, notification, x, y, boxWidth, boxHeight,
+                    scale, textScale, Math.round(255.0f * progress));
+        }
+        float accentWidth = ACCENT_BAR_WIDTH * scale + (boxWidth - ACCENT_BAR_WIDTH * scale) * (1.0f - progress);
+        float accentX = isLeftDocked() ? x + boxWidth - accentWidth : x;
+        scope.rect(accentX, y, accentWidth, boxHeight, lumin(notification.getMode().getColor()));
+    }
+
+    private void renderText(UiTree.Scope scope, Notification n, float x, float y, float boxWidth, float boxHeight, float scale, float desiredTextScale, int alpha) {
+        boolean hasSubTitle = !n.getSubTitle().isEmpty();
+        float textScale = getFittedTextScale(n, boxWidth, scale, desiredTextScale);
+        float subTitleScale = getSubTitleScale(textScale);
+        float lineGap = getLineGap(textScale, scale);
+        float titleHeight = textHeight(textScale, "graven-default");
+        float subTitleHeight = hasSubTitle ? textHeight(subTitleScale, "graven-default") : 0.0f;
+        float contentHeight = titleHeight + subTitleHeight + (hasSubTitle ? lineGap : 0.0f);
+        float textX = x + (isLeftDocked() ? TEXT_PADDING * scale : (ACCENT_BAR_WIDTH + TEXT_PADDING) * scale);
+        float titleY = y + (boxHeight - contentHeight) / 2.0f;
+
+        scope.text(n.getTitle(), textX, titleY, textScale, lumin(new Color(255, 255, 255, alpha)));
+        if (hasSubTitle) {
+            float subTitleY = titleY + titleHeight + lineGap;
+            scope.text(n.getSubTitle(), textX, subTitleY, subTitleScale, lumin(n.getMode().getColor(Math.round(alpha * 0.86f))));
+        }
+    }
+
+    private float getLineGap(float textScale, float scale) {
+        return LINE_GAP * textScale + subtitleYOffset.getValue().floatValue() * scale;
+    }
+
+    private float getFittedTextScale(Notification notification, float boxWidth, float scale, float desiredTextScale) {
+        float maxWidth = Math.max(textWidth(notification.getTitle(), desiredTextScale, "graven-default"),
+                textWidth(notification.getSubTitle(), getSubTitleScale(desiredTextScale), "graven-default"));
+        float availableWidth = Math.max(1.0f, boxWidth - (TEXT_PADDING * 2.0f + ACCENT_BAR_WIDTH) * scale);
+        float widthFit = maxWidth > availableWidth ? availableWidth / maxWidth : 1.0f;
+
+        return Math.max(0.35f, desiredTextScale * widthFit);
+    }
+
+    private boolean textExceedsBox(Notification notification, float boxWidth,
+                                   float boxHeight, float scale, float desiredTextScale) {
+        float textScale = getFittedTextScale(notification, boxWidth, scale, desiredTextScale);
+        float subTitleScale = getSubTitleScale(textScale);
+        float maxWidth = Math.max(textWidth(notification.getTitle(), textScale, "graven-default"),
+                textWidth(notification.getSubTitle(), subTitleScale, "graven-default"));
+        float availableWidth = Math.max(1.0f,
+                boxWidth - (TEXT_PADDING * 2.0f + ACCENT_BAR_WIDTH) * scale);
+
+        float titleHeight = textHeight(textScale, "graven-default");
+        if (notification.getSubTitle().isEmpty()) {
+            return maxWidth > availableWidth || titleHeight > boxHeight;
+        }
+
+        float subTitleHeight = textHeight(subTitleScale, "graven-default");
+        float lineGap = getLineGap(textScale, scale);
+        float contentHeight = titleHeight + lineGap + subTitleHeight;
+        float titleY = (boxHeight - contentHeight) * 0.5f;
+        float subTitleY = titleY + titleHeight + lineGap;
+        float contentTop = Math.min(titleY, subTitleY);
+        float contentBottom = Math.max(titleY + titleHeight, subTitleY + subTitleHeight);
+        return maxWidth > availableWidth || contentTop < 0.0f || contentBottom > boxHeight;
+    }
+
+    private boolean isLeftDocked() {
+        return getHorizontalAnchor() == HorizontalAnchor.Left;
+    }
+
+    private Notification createPreviewNotification() {
+        if (mc.screen instanceof HudEditorScreen) {
+            return new Notification("Preview", "Notification", NotificationMode.Success, false);
+        }
+        return null;
+    }
+
+    private enum RenderStage {
+        ENTER_BAR,
+        ENTER_CONTENT,
+        SHOW,
+        EXIT_CONTENT,
+        EXIT_BAR,
+        HIDDEN
+    }
+
+    private record RenderFrame(RenderStage stage, float progress, float occupiedHeight) {
+    }
+
+    private record RenderEntry(Notification notification, float boxWidth, RenderFrame frame) {
+    }
+
+    private record OpalEntry(Notification notification, float width) {
+    }
+
+    private enum OpalDisplayMode {
+        Legacy,
+        Island
+    }
+
+}

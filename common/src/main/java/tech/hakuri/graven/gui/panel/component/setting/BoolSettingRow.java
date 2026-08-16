@@ -1,0 +1,59 @@
+package tech.hakuri.graven.gui.panel.component.setting;
+
+import com.github.slmpc.lumingraphics.ui.text.UiTextMetrics;
+import com.github.slmpc.lumingraphics.ui.geometry.UiRect;
+import com.github.slmpc.lumingraphics.ui.tree.UiTree;
+import tech.hakuri.graven.gui.panel.component.PanelElements;
+import tech.hakuri.graven.gui.panel.component.SettingRow;
+import tech.hakuri.graven.gui.theme.MD3Theme;
+import tech.hakuri.graven.managers.Managers;
+import tech.hakuri.graven.managers.impl.sound.SoundKey;
+import tech.hakuri.graven.settings.impl.BoolSetting;
+import tech.hakuri.graven.utils.render.animation.Animation;
+import tech.hakuri.graven.utils.render.animation.Easing;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
+
+public class BoolSettingRow extends SettingRow<BoolSetting> {
+
+    private final Animation hoverAnimation = new Animation(Easing.EASE_OUT_CUBIC, 160L);
+    private final Animation toggleAnimation = new Animation(Easing.EASE_OUT_ELASTIC, 620L);
+
+    public BoolSettingRow(BoolSetting setting) {
+        super(setting);
+        hoverAnimation.setStartValue(0.0f);
+        toggleAnimation.setStartValue(setting.getValue() ? 1.0f : 0.0f);
+    }
+
+    @Override
+    public void buildUi(UiTree.Scope scope, GuiGraphicsExtractor guiGraphics, UiTextMetrics textRenderer, UiRect bounds, float hoverProgress, int mouseX, int mouseY, float partialTick) {
+        float labelScale = 0.68f;
+        float labelY = (bounds.height() - textRenderer.textHeight(labelScale, null)) / 2.0f;
+        float animatedHover = scope.animate(hoverAnimation, hoverProgress);
+        float toggleProgress = scope.animate(toggleAnimation, setting.getValue());
+
+        scope.roundRect(0.0f, 0.0f, bounds.width(), bounds.height(), MD3Theme.CARD_RADIUS, MD3Theme.rowSurface(animatedHover));
+        scope.text(setting.getDisplayName(), MD3Theme.ROW_CONTENT_INSET, labelY, labelScale, MD3Theme.TEXT_PRIMARY);
+        PanelElements.buildSwitch(scope, getSwitchBounds(bounds).relativeTo(bounds), toggleProgress, animatedHover);
+    }
+
+    private UiRect getSwitchBounds(UiRect bounds) {
+        return PanelElements.switchBounds(bounds);
+    }
+
+    @Override
+    public boolean mouseClicked(UiRect bounds, MouseButtonEvent event, boolean isDoubleClick) {
+        if (!bounds.contains(event.x(), event.y()) || event.button() != 0) {
+            return false;
+        }
+        setting.setValue(!setting.getValue());
+        Managers.SOUND.playInUi(setting.getValue() ? SoundKey.SETTINGS_OPEN : SoundKey.SETTINGS_CLOSE);
+        return true;
+    }
+
+    @Override
+    public boolean hasActiveAnimation() {
+        return !hoverAnimation.isFinished() || !toggleAnimation.isFinished();
+    }
+
+}

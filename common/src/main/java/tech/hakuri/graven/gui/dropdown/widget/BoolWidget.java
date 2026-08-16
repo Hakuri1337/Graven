@@ -1,0 +1,122 @@
+package tech.hakuri.graven.gui.dropdown.widget;
+
+import java.awt.Color;
+
+import tech.hakuri.graven.gui.dropdown.DropdownTheme;
+import com.github.slmpc.lumingraphics.ui.text.UiTextMetrics;
+import com.github.slmpc.lumingraphics.ui.tree.UiTree;
+import tech.hakuri.graven.gui.theme.MD3Theme;
+import tech.hakuri.graven.managers.Managers;
+import tech.hakuri.graven.managers.impl.sound.SoundKey;
+import tech.hakuri.graven.settings.impl.BoolSetting;
+import tech.hakuri.graven.utils.render.animation.Animation;
+import tech.hakuri.graven.utils.render.animation.Easing;
+import net.minecraft.util.Mth;
+
+public class BoolWidget extends SettingWidget<BoolSetting> {
+
+    private static final float SWITCH_WIDTH = 22.0f;
+    private static final float SWITCH_HEIGHT = 12.0f;
+    private static final float SWITCH_RADIUS = 6.0f;
+
+    private static final float KNOB_SIZE_OFF = 6.0f;
+    private static final float KNOB_SIZE_ON = 9.0f;
+    private static final float KNOB_INSET_OFF = 3.5f;
+    private static final float KNOB_INSET_ON = 2.0f;
+    private static final float STATE_LAYER_SIZE = 16.0f;
+    private static final float KNOB_STRETCH = 3.5f;
+
+    private final Animation toggleAnim = new Animation(Easing.EASE_OUT_CUBIC, DropdownTheme.ANIM_TOGGLE);
+    private final Animation knobBounceAnim = new Animation(Easing.EASE_OUT_ELASTIC, 450L);
+    private final Animation hoverAnim = new Animation(Easing.EASE_OUT_CUBIC, DropdownTheme.ANIM_HOVER);
+
+    public BoolWidget(BoolSetting setting) {
+        super(setting);
+        float initial = setting.getValue() ? 1.0f : 0.0f;
+        toggleAnim.setStartValue(initial);
+        knobBounceAnim.setStartValue(initial);
+    }
+
+    @Override
+    public float getHeight() {
+        return DropdownTheme.SETTING_HEIGHT;
+    }
+
+    @Override
+    public void draw(UiTree.Scope scope, UiTextMetrics textMetrics, int mouseX, int mouseY) {
+        float target = setting.getValue() ? 1.0f : 0.0f;
+        toggleAnim.run(target);
+        knobBounceAnim.run(target);
+        float t = toggleAnim.getValue();
+        float bounce = knobBounceAnim.getValue();
+
+        float sw = SWITCH_WIDTH;
+        float sh = SWITCH_HEIGHT;
+        float sx = width - DropdownTheme.SETTING_PADDING_X - sw;
+        float sy = (getHeight() - sh) * 0.5f;
+
+        boolean hovered = isHovered(mouseX, mouseY, absoluteX(sx - 2), absoluteY(sy - 2), sw + 4, sh + 4);
+        hoverAnim.run(hovered ? 1.0f : 0.0f);
+        float hoverProgress = hoverAnim.getValue();
+
+        scope.text(setting.getDisplayName(), DropdownTheme.SETTING_PADDING_X,
+                (getHeight() - textMetrics.textHeight(DropdownTheme.SETTING_TEXT_SCALE, null)) * 0.5f,
+                DropdownTheme.SETTING_TEXT_SCALE, DropdownTheme.settingLabel());
+
+        if (DropdownTheme.isOpal()) {
+            Color track = MD3Theme.lerp(new Color(60, 60, 60, 255), MD3Theme.PRIMARY, t);
+            scope.roundRect(sx, sy, sw, sh, SWITCH_RADIUS, track);
+            float knobSize = 8.0f;
+            float knobMinX = sx + 2.0f + knobSize * 0.5f;
+            float knobMaxX = sx + sw - 2.0f - knobSize * 0.5f;
+            float knobCx = Mth.lerp(bounce, knobMinX, knobMaxX);
+            float knobCy = sy + sh * 0.5f;
+            scope.roundRect(knobCx - knobSize * 0.5f, knobCy - knobSize * 0.5f,
+                    knobSize, knobSize, knobSize * 0.5f, Color.WHITE);
+            return;
+        }
+
+        scope.roundRect(sx, sy, sw, sh, SWITCH_RADIUS, MD3Theme.switchTrack(t));
+
+        float outlineW = MD3Theme.switchTrackOutlineWidth(t);
+        if (outlineW > 0.01f) {
+            scope.outline(sx, sy, sw, sh, SWITCH_RADIUS, outlineW, MD3Theme.switchTrackOutline(t, hoverProgress));
+        }
+
+        float knobSize = Mth.lerp(Mth.clamp(t, 0.0f, 1.0f), KNOB_SIZE_OFF, KNOB_SIZE_ON);
+        float stretchFactor = 4.0f * t * (1.0f - t);
+        float knobW = knobSize + KNOB_STRETCH * stretchFactor;
+        float inset = Mth.lerp(t, KNOB_INSET_OFF, KNOB_INSET_ON);
+        float knobMinX = sx + inset + knobW * 0.5f;
+        float knobMaxX = sx + sw - inset - knobW * 0.5f;
+        float knobCx = Mth.lerp(bounce, knobMinX, knobMaxX);
+        float knobCy = sy + sh * 0.5f;
+
+        if (hoverProgress > 0.02f) {
+            float haloX = knobCx - STATE_LAYER_SIZE * 0.5f;
+            float haloY = knobCy - STATE_LAYER_SIZE * 0.5f;
+            scope.roundRect(haloX, haloY, STATE_LAYER_SIZE, STATE_LAYER_SIZE, STATE_LAYER_SIZE * 0.5f, MD3Theme.stateLayer(MD3Theme.TEXT_PRIMARY, hoverProgress, 18));
+        }
+
+        float knobRadius = knobSize * 0.5f;
+        scope.roundRect(knobCx - knobW * 0.5f, knobCy - knobSize * 0.5f, knobW, knobSize, knobRadius, MD3Theme.switchKnob(t));
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0) {
+            float sw = SWITCH_WIDTH;
+            float sh = SWITCH_HEIGHT;
+            float sx = absoluteX(width - DropdownTheme.SETTING_PADDING_X - sw);
+            float sy = absoluteY((getHeight() - sh) * 0.5f);
+            if (isHovered(mouseX, mouseY, sx - 2, sy - 2, sw + 4, sh + 4)) {
+                boolean newValue = !setting.getValue();
+                setting.setValue(newValue);
+                Managers.SOUND.playInUi(newValue ? SoundKey.SETTINGS_OPEN : SoundKey.SETTINGS_CLOSE);
+                return true;
+            }
+        }
+        return false;
+    }
+
+}

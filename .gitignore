@@ -1,0 +1,49 @@
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# idea
+out
+*.ipr
+*.iws
+*.iml
+.idea
+
+# gradle
+build
+.gradle
+
+# other
+.kotlin
+.eclipse
+__pycache__/
+*.pyc
+run
+runs
+run-data
+repo
+
+# Mac OS
+.DS_Store
+
+# AI
+.vscode
+.trae
+.claude
+/references
+/reference
+
+# local reference projects and agent verification artifacts
+/SkidProjects
+/analysis_artifacts
+/migration-artifacts
+/.codex-artifacts
+/tmp
+/MODIFIED_FILE
+/DIFF_FILE
+/VERIFICATION.txt
+/ROLLBACK.sh

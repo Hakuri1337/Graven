@@ -1,0 +1,57 @@
+{
+  "enable": {
+    "sounds": [
+      "graven:enable"
+    ]
+  },
+  "disable": {
+    "sounds": [
+      "graven:disable"
+    ]
+  },
+  "settings_open": {
+    "sounds": [
+      "graven:settings-open"
+    ]
+  },
+  "settings_close": {
+    "sounds": [
+      "graven:settings-close"
+    ]
+  },
+  "shutdown": {
+    "sounds": [
+      "graven:shutdown"
+    ]
+  },
+  "uwu": {
+    "sounds": [
+      "graven:uwu"
+    ]
+  },
+  "nya": {
+    "sounds": [
+      "graven:nya"
+    ]
+  },
+  "moan1": {
+    "sounds": [
+      "graven:moan1"
+    ]
+  },
+  "moan2": {
+    "sounds": [
+      "graven:moan2"
+    ]
+  },
+  "moan3": {
+    "sounds": [
+      "graven:moan3"
+    ]
+  },
+  "moan4": {
+    "sounds": [
+      "graven:moan4"
+    ]
+  }
+}

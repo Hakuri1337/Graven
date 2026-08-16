@@ -1,0 +1,28 @@
+package tech.hakuri.graven.utils.client;
+
+import tech.hakuri.graven.holders.ConfigHolder;
+import net.minecraft.util.Util;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public final class ConfigFolderOpener {
+
+    private ConfigFolderOpener() {
+    }
+
+    /**
+     * 创建并使用系统文件管理器打开 Graven 配置目录。
+     *
+     * @return 配置目录路径
+     * @throws IOException 无法创建或打开配置目录时
+     */
+    public static Path openConfigFolder() throws IOException {
+        Path configDir = ConfigHolder.INSTANCE.getConfigDir();
+        Files.createDirectories(configDir);
+        Util.getPlatform().openPath(configDir);
+        return configDir;
+    }
+
+}

@@ -1,0 +1,22 @@
+package tech.hakuri.graven.gui.panel.view;
+
+import com.github.slmpc.lumingraphics.ui.geometry.UiRect;
+import tech.hakuri.graven.gui.panel.PanelState;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
+
+public class TopBarPanel {
+
+    protected final PanelState state;
+
+    public TopBarPanel(PanelState state) {
+        this.state = state;
+    }
+
+    public void render(GuiGraphicsExtractor guiGraphics, UiRect bounds, int mouseX, int mouseY, float partialTick) {
+    }
+
+    public boolean mouseClicked(MouseButtonEvent event, boolean isDoubleClick) {
+        return false;
+    }
+}
