@@ -47,7 +47,11 @@ public final class WorldToScreen {
     @Nullable
     public static Vector3f calcWorld2Screen(Vec3 pos) {
         Vector3f projected = calcWorld2ScreenRaw(pos);
-        return projected.z < Camera.PROJECTION_Z_NEAR ? null : projected;
+        if (!Float.isFinite(projected.x) || !Float.isFinite(projected.y) || !Float.isFinite(projected.z)
+                || projected.z < Camera.PROJECTION_Z_NEAR) {
+            return null;
+        }
+        return projected;
     }
 
     /**
@@ -60,10 +64,15 @@ public final class WorldToScreen {
         CameraRenderState cameraState = mc.gameRenderer.getGameRenderState().levelRenderState.cameraRenderState;
         Vector3f cameraRelativePos = pos.subtract(cameraState.pos).toVector3f();
         float depth = -cameraState.viewRotationMatrix.transformPosition(cameraRelativePos, new Vector3f()).z;
-        if (depth < Camera.PROJECTION_Z_NEAR) return 0.0f;
+        float projectionScale = cameraState.projectionMatrix.m11();
+        if (!Float.isFinite(depth) || depth < Camera.PROJECTION_Z_NEAR
+                || !Float.isFinite(projectionScale) || projectionScale <= 0.0f) {
+            return 0.0f;
+        }
 
-        return LuminRenderSystem.getScaledHeight() * cameraState.projectionMatrix.m11()
+        float scale = LuminRenderSystem.getScaledHeight() * projectionScale
                 / (2.0f * depth * REFERENCE_PIXELS_PER_WORLD_UNIT);
+        return Float.isFinite(scale) && scale > 0.0f ? scale : 0.0f;
     }
 
 }

@@ -86,6 +86,7 @@ public class NameTags extends Module {
             if (projectedPosition == null) continue;
 
             float renderScale = textScale * WorldToScreen.calcScale(anchor);
+            if (!Float.isFinite(renderScale) || renderScale <= 0.0f) continue;
 
             List<ItemStack> equipmentItems = buildEquipmentItems(target);
             String nameText = target.getName().getString();

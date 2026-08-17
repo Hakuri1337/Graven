@@ -55,6 +55,7 @@ docs/
 | OpenZen AntiKB、NoSlow 与 InventoryManager 实际实现、包时序与兼容性报告 | [OpenZen AntiKB/NoSlow/InventoryManager 实现](development/openzen-antikb-noslow-inventory-migration-implementation.md) |
 | AntiKB 包回放与初始语言加载修复 | [AntiKB 与初始语言加载修复](development/antikb-and-i18n-hotfix-20260816.md) |
 | Render 模块翻译键修复 | [Render 翻译键修复](development/i18n-render-key-fix-20260816.md) |
+| NameTags 文本指标崩溃修复 | [NameTags 文本指标崩溃修复](development/nametags-text-metric-crash-20260817.md) |
 | 配置目录、持久化、RotationManager | [配置与旋转](development/configuration-and-rotation.md) |
 | Lumin、GUI/HUD、2D/3D 渲染 | [渲染](development/rendering.md) |
 | Target HUD 动态皮肤资源检查与回退 | [Target HUD 纹理回退](development/target-hud-texture-fallback.md) |
