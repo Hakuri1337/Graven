@@ -14,7 +14,9 @@ public class MixinChatComponent {
 
     @ModifyVariable(method = "handleMessage", at = @At("HEAD"), argsOnly = true, ordinal = 0)
     private FormattedCharSequence sakura$animateClientPrefix(FormattedCharSequence message) {
-        return Managers.NOTIFICATION.applyAnimatedPrefix(message);
+        return tech.hakuri.graven.utils.asaka.grimvelocity.ChatUtils.applyAnimatedPrefix(
+                Managers.NOTIFICATION.applyAnimatedPrefix(message)
+        );
     }
 
 }

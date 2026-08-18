@@ -4,6 +4,7 @@ import tech.hakuri.graven.events.bus.EventBus;
 import tech.hakuri.graven.events.bus.EventHandler;
 import tech.hakuri.graven.events.bus.listeners.ConsumerListener;
 import tech.hakuri.graven.events.impl.PlayerTickEvent;
+import tech.hakuri.graven.events.impl.JumpEvent;
 import tech.hakuri.graven.events.impl.Render3DEvent;
 import tech.hakuri.graven.managers.Managers;
 import tech.hakuri.graven.managers.impl.target.TargetRequest;
@@ -25,6 +26,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class KillAura extends Module {
@@ -68,12 +70,16 @@ public class KillAura extends Module {
 
     public final DoubleSetting aimRange = doubleSetting("Aim Range", 4.0, 1.0, 6.0, 0.1);
 
+    private final DoubleSetting range = doubleSetting("Range", 3.0, 3.0, 8.0, 0.1);
+
     private final IntSetting fov = intSetting("FOV", 360, 10, 360, 1);
 
     private final IntSetting rotationSpeed = intSetting("Rotation Speed", 180, 10, 180, 10);
 
     private final IntSetting minCPS = intSetting("Min CPS", 10, 1, 20, 1, () -> mode.is(Mode.OnePointEight));
     private final IntSetting maxCPS = intSetting("Max CPS", 12, 1, 20, 1, () -> mode.is(Mode.OnePointEight));
+
+    private final BoolSetting heypixelKeepSprint = boolSetting("Heypixel KeepSprint", false);
 
     private final BoolSetting player = boolSetting("Player", true);
     private final BoolSetting mob = boolSetting("Mob", true);
@@ -122,29 +128,44 @@ public class KillAura extends Module {
 
     private int switchIndex = 0;
     private double attacks = 0.0;
+    private boolean sprintCancelled;
+    private int groundTicks;
+
+    private enum AttackAttempt {
+        ATTACKED,
+        NOT_ATTACKED,
+        SPRINT_SUPPRESSED
+    }
 
     @Override
     protected void onDisable() {
         target = null;
         switchIndex = 0;
+        sprintCancelled = false;
+        groundTicks = 0;
         DeobfESP.retainRisingEffects();
     }
 
     @EventHandler
     private void onTick(PlayerTickEvent.Pre event) {
-        // AntiKB 正在延迟受击包时，禁止并发交互包破坏服务器的输入包顺序。
-        if (AntiKB.INSTANCE.isSuspending()) {
-            target = null;
-            return;
+        if (mc.player.onGround()) {
+            groundTicks++;
+        } else {
+            groundTicks = 0;
         }
+
+        if (mc.player.isSprinting() || target == null) {
+            sprintCancelled = false;
+        }
+
         if (!esp.getValue() || !espMode.is(ESPMode.Deobf)) {
             DeobfESP.clear();
         }
 
         if (mc.player.isUsingItem() || mc.player.isBlocking()) return;
 
-        List<LivingEntity> targets = Managers.TARGET.acquireTargets(TargetRequest.of(
-                aimRange.getValue(),
+        List<LivingEntity> targets = new ArrayList<>(Managers.TARGET.acquireTargets(TargetRequest.of(
+                Math.max(aimRange.getValue(), range.getValue()),
                 fov.getValue().floatValue(),
                 player.getValue(),
                 mob.getValue(),
@@ -152,10 +173,13 @@ public class KillAura extends Module {
                 villagers.getValue(),
                 invisible.getValue(),
                 64
-        ));
+        )));
+
+        targets.removeIf(entity -> RotationUtils.getEyeDistanceToEntity(entity) > range.getValue());
 
         if (targets.isEmpty()) {
             target = null;
+            sprintCancelled = false;
             return;
         }
 
@@ -176,7 +200,10 @@ public class KillAura extends Module {
             Managers.ROTATION.setRotations(RotationUtils.getRotationsToEntity(target), rotationSpeed.getValue().floatValue(), Priority.Medium);
             if (mode.is(Mode.OnePointEight)) {
                 while (attacks >= 1.0) {
-                    clickTargets(targets);
+                    AttackAttempt attempt = clickTargets(targets);
+                    if (attempt == AttackAttempt.SPRINT_SUPPRESSED) {
+                        break;
+                    }
                     attacks -= 1.0;
                 }
             } else {
@@ -187,23 +214,89 @@ public class KillAura extends Module {
         }
     }
 
-    private void clickTargets(List<LivingEntity> targets) {
-        HitResult hitResult = Managers.ROTATION.getHitResult();
+    private AttackAttempt clickTargets(List<LivingEntity> targets) {
+        HitResult hitResult = Managers.ROTATION.getHitResult(range.getValue());
+        List<LivingEntity> attackable = new ArrayList<>();
         if (targetMode.is(TargetMode.Multiple)) {
-            for (LivingEntity target : targets) {
-                if (throughWalls.getValue() || (hitResult != null && hitResult.getType() == HitResult.Type.ENTITY)) {
-                    doAttack(target);
+            for (LivingEntity candidate : targets) {
+                if (isWithinRange(candidate) && (throughWalls.getValue()
+                        || (hitResult != null && hitResult.getType() == HitResult.Type.ENTITY))) {
+                    attackable.add(candidate);
                 }
+            }
+        } else if (isWithinRange(target) && (throughWalls.getValue()
+                || (hitResult instanceof EntityHitResult entityHitResult && entityHitResult.getEntity() == target))) {
+            attackable.add(target);
+        }
+
+        if (attackable.isEmpty()) {
+            if (targetMode.is(TargetMode.Switch)) {
+                switchIndex++;
+            }
+            return AttackAttempt.NOT_ATTACKED;
+        }
+
+        if (heypixelKeepSprint.getValue()
+                && target != null
+                && !shouldSkipHeypixelKeepSprint()
+                && isWithinHeypixelAttackCooldown()
+                && stopHeypixelSprinting()) {
+            return AttackAttempt.SPRINT_SUPPRESSED;
+        }
+
+        boolean attacked = false;
+        if (targetMode.is(TargetMode.Multiple)) {
+            for (LivingEntity candidate : attackable) {
+                doAttack(candidate);
+                attacked = true;
             }
             switchIndex++;
         } else {
-            if (throughWalls.getValue() || (hitResult instanceof EntityHitResult entityHitResult && entityHitResult.getEntity() == target)) {
-                doAttack(target);
-            }
+            doAttack(target);
+            attacked = true;
             if (targetMode.is(TargetMode.Switch)) {
                 switchIndex++;
             }
         }
+        return attacked ? AttackAttempt.ATTACKED : AttackAttempt.NOT_ATTACKED;
+    }
+
+    private boolean shouldSkipHeypixelKeepSprint() {
+        return mc.player.hurtTime < 8;
+    }
+
+    private boolean isWithinHeypixelAttackCooldown() {
+        return target != null && isWithinRange(target);
+    }
+
+    private boolean stopHeypixelSprinting() {
+        if (groundTicks == 1) {
+            return true;
+        }
+
+        if (mc.player.isSprinting()) {
+            mc.player.setSprinting(false);
+            mc.options.keySprint.setDown(false);
+            sprintCancelled = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean isHeypixelKeepSprintTransition() {
+        return heypixelKeepSprint.getValue() && sprintCancelled;
+    }
+
+    @EventHandler
+    private void onJump(JumpEvent event) {
+        if (isHeypixelKeepSprintTransition() && !mc.player.isSprinting()) {
+            event.cancel();
+        }
+    }
+
+    private boolean isWithinRange(LivingEntity entity) {
+        return RotationUtils.getEyeDistanceToEntity(entity) <= range.getValue();
     }
 
     private void doAttack(LivingEntity target) {

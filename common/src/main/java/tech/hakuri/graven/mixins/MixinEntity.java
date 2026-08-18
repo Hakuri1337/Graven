@@ -3,7 +3,7 @@ package tech.hakuri.graven.mixins;
 import tech.hakuri.graven.events.bus.EventBus;
 import tech.hakuri.graven.events.impl.RaytraceEvent;
 import tech.hakuri.graven.events.impl.StrafeEvent;
-import tech.hakuri.graven.modules.impl.movement.Velocity;
+import tech.hakuri.graven.modules.impl.combat.Velocity;
 import tech.hakuri.graven.modules.impl.render.FreeCamera;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;

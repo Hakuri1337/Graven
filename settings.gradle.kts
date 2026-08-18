@@ -14,6 +14,14 @@ pluginManagement {
     }
 
     repositories {
+        maven {
+            name = "AliyunGradlePluginMirror"
+            url = uri("https://maven.aliyun.com/repository/gradle-plugin")
+        }
+        maven {
+            name = "AliyunPublicMirror"
+            url = uri("https://maven.aliyun.com/repository/public")
+        }
         gradlePluginPortal()
         mavenCentral()
         exclusiveContent {

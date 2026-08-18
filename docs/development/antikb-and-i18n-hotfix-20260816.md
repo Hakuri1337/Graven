@@ -1,5 +1,7 @@
 # AntiKB 与初始语言加载修复
 
+> 历史状态：`AntiKB` 已于 2026-08-18 从 Graven 移除；本节只保留当时的问题与修复记录。
+
 ## 语言加载
 
 Fabric 在 `graven.init()` 前注册 `LanguageReloadListener`。首次资源重载会因此填充 `GravenLanguageManager`，Dropdown、Panel 和主菜单不再显示 `graven.*` 原始 key。

@@ -56,6 +56,22 @@ java {
 }
 
 repositories {
+    maven {
+        name = "GravenLocalMaven"
+        url = rootProject.layout.projectDirectory.dir("local-maven").asFile.toURI()
+        content {
+            includeGroupAndSubgroups("com.github.slmpc")
+            includeGroupAndSubgroups("net.neoforged")
+            includeGroupAndSubgroups("net.neoforged.jst")
+            includeGroupAndSubgroups("net.neoforged.installertools")
+            includeGroupAndSubgroups("io.codechicken")
+            includeGroup("net.minecraftforge")
+        }
+    }
+    maven {
+        name = "AliyunPublicMirror"
+        url = uri("https://maven.aliyun.com/repository/public")
+    }
     mavenLocal {
         content { includeGroupAndSubgroups("com.github.slmpc") }
     }

@@ -14,14 +14,19 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static tech.hakuri.graven.Constants.mc;
 
 @Mixin(LivingEntity.class)
 public class MixinLivingEntity {
+
+    @Unique
+    private float graven$jumpYaw = Float.NaN;
 
     @WrapOperation(method = "tickHeadTurn", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F"))
     private float modifyHeadYaw(LivingEntity entity, Operation<Float> original) {
@@ -32,13 +37,22 @@ public class MixinLivingEntity {
         return original.call(entity);
     }
 
+    @Inject(method = "jumpFromGround", at = @At("HEAD"), cancellable = true)
+    private void onJump(CallbackInfo ci) {
+        graven$jumpYaw = Float.NaN;
+        if ((Object) this == mc.player) {
+            JumpEvent event = EventBus.INSTANCE.post(new JumpEvent(mc.player.getYRot()));
+            if (event.isCancelled()) {
+                ci.cancel();
+                return;
+            }
+            graven$jumpYaw = event.getYaw();
+        }
+    }
+
     @ModifyExpressionValue(method = "jumpFromGround", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F"))
     private float modifyJumpYaw(float original) {
-        if ((Object) this == mc.player) {
-            JumpEvent event = EventBus.INSTANCE.post(new JumpEvent(original));
-            return event.getYaw();
-        }
-        return original;
+        return (Object) this == mc.player && !Float.isNaN(graven$jumpYaw) ? graven$jumpYaw : original;
     }
 
     @ModifyExpressionValue(method = "updateFallFlyingMovement", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;getLookAngle()Lnet/minecraft/world/phys/Vec3;"))

@@ -1,6 +1,6 @@
 package tech.hakuri.graven.mixins;
 
-import tech.hakuri.graven.modules.impl.movement.Velocity;
+import tech.hakuri.graven.modules.impl.combat.Velocity;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.core.Direction;

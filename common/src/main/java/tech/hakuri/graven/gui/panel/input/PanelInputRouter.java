@@ -16,18 +16,18 @@ public class PanelInputRouter {
             return true;
         }
         if (clientSettingMode) {
-            if (clientSettingPanel.mouseClicked(event, isDoubleClick)) {
+            if (clientSettingPanel != null && clientSettingPanel.mouseClicked(event, isDoubleClick)) {
                 return true;
             }
         } else {
-            if (detailPanel.mouseClicked(event, isDoubleClick)) {
+            if (detailPanel != null && detailPanel.mouseClicked(event, isDoubleClick)) {
                 return true;
             }
-            if (moduleListPanel.mouseClicked(event, isDoubleClick)) {
+            if (moduleListPanel != null && moduleListPanel.mouseClicked(event, isDoubleClick)) {
                 return true;
             }
         }
-        return categoryRailPanel.mouseClicked(event, isDoubleClick);
+        return categoryRailPanel != null && categoryRailPanel.mouseClicked(event, isDoubleClick);
     }
 
     public boolean routeKeyPressed(KeyEvent event, PanelPopupHost popupHost, ModuleDetailPanel detailPanel, ModuleListPanel moduleListPanel, ClientSettingPanel clientSettingPanel, boolean clientSettingMode) {
@@ -35,12 +35,12 @@ public class PanelInputRouter {
             return true;
         }
         if (clientSettingMode) {
-            return clientSettingPanel.keyPressed(event);
+            return clientSettingPanel != null && clientSettingPanel.keyPressed(event);
         }
-        if (moduleListPanel.keyPressed(event)) {
+        if (moduleListPanel != null && moduleListPanel.keyPressed(event)) {
             return true;
         }
-        return detailPanel.keyPressed(event);
+        return detailPanel != null && detailPanel.keyPressed(event);
     }
 
     public boolean routeMouseReleased(MouseButtonEvent event, PanelPopupHost popupHost, ModuleDetailPanel detailPanel, ModuleListPanel moduleListPanel, ClientSettingPanel clientSettingPanel, boolean clientSettingMode) {
@@ -48,12 +48,12 @@ public class PanelInputRouter {
             return popupHost.mouseReleased(event);
         }
         if (clientSettingMode) {
-            return clientSettingPanel.mouseReleased(event);
+            return clientSettingPanel != null && clientSettingPanel.mouseReleased(event);
         }
-        if (detailPanel.mouseReleased(event)) {
+        if (detailPanel != null && detailPanel.mouseReleased(event)) {
             return true;
         }
-        return moduleListPanel.mouseReleased(event);
+        return moduleListPanel != null && moduleListPanel.mouseReleased(event);
     }
 
     public boolean routeMouseDragged(MouseButtonEvent event, double mouseX, double mouseY, PanelPopupHost popupHost, ModuleDetailPanel detailPanel, ModuleListPanel moduleListPanel, ClientSettingPanel clientSettingPanel, boolean clientSettingMode) {
@@ -61,12 +61,12 @@ public class PanelInputRouter {
             return popupHost.mouseDragged(event, mouseX, mouseY);
         }
         if (clientSettingMode) {
-            return clientSettingPanel.mouseDragged(event, mouseX, mouseY);
+            return clientSettingPanel != null && clientSettingPanel.mouseDragged(event, mouseX, mouseY);
         }
-        if (detailPanel.mouseDragged(event, mouseX, mouseY)) {
+        if (detailPanel != null && detailPanel.mouseDragged(event, mouseX, mouseY)) {
             return true;
         }
-        return moduleListPanel.mouseDragged(event, mouseX, mouseY);
+        return moduleListPanel != null && moduleListPanel.mouseDragged(event, mouseX, mouseY);
     }
 
     public boolean routeCharTyped(CharacterEvent event, PanelPopupHost popupHost, ModuleDetailPanel detailPanel, ModuleListPanel moduleListPanel, ClientSettingPanel clientSettingPanel, boolean clientSettingMode) {
@@ -74,12 +74,12 @@ public class PanelInputRouter {
             return popupHost.charTyped(event);
         }
         if (clientSettingMode) {
-            return clientSettingPanel.charTyped(event);
+            return clientSettingPanel != null && clientSettingPanel.charTyped(event);
         }
-        if (moduleListPanel.charTyped(event)) {
+        if (moduleListPanel != null && moduleListPanel.charTyped(event)) {
             return true;
         }
-        return detailPanel.charTyped(event);
+        return detailPanel != null && detailPanel.charTyped(event);
     }
 
 }

@@ -15,4 +15,5 @@
 - 恢复 Asaka KeepSprint 的 `Vanilla/Prediction`、攻击减速事件和热栏切换；
 - 继续使用 `FightManager` 协调普通攻击与纯发包攻击。
 
-当前生产行为和验证矩阵以 [Asaka Velocity Grim 完整迁移](asaka-velocity-grim-migration.md) 为准。
+Grim 模式已按下游 Asaka 源码重新迁移。本文列出的优化仍未启用；当前生产行为以
+[Asaka GrimVelocity 完整重迁移](asaka-velocity-grim-migration.md) 为准。

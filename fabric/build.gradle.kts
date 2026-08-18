@@ -65,6 +65,10 @@ dependencies {
     implementation(libs.fabric.api)
     implementation(libs.luaj.jse)
     include(libs.luaj.jse)
+    implementation(libs.jcodec)
+    include(libs.jcodec)
+    implementation(libs.jcodec.javase)
+    include(libs.jcodec.javase)
     compileOnly(libs.sodium.fabric)
     compileOnly(libs.jsr305)
 }

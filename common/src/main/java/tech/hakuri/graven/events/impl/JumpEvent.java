@@ -1,6 +1,8 @@
 package tech.hakuri.graven.events.impl;
 
-public class JumpEvent {
+import tech.hakuri.graven.events.bus.Cancellable;
+
+public class JumpEvent extends Cancellable {
 
     private float yaw;
 

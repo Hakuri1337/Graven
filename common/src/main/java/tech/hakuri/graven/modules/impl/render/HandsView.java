@@ -3,6 +3,7 @@ package tech.hakuri.graven.modules.impl.render;
 import tech.hakuri.graven.modules.Category;
 import tech.hakuri.graven.modules.Module;
 import tech.hakuri.graven.modules.impl.combat.KillAura;
+import tech.hakuri.graven.modules.impl.combat.TpAura;
 import tech.hakuri.graven.settings.impl.BoolSetting;
 import tech.hakuri.graven.settings.impl.EnumSetting;
 import tech.hakuri.graven.settings.impl.IntSetting;
@@ -56,7 +57,9 @@ public class HandsView extends Module {
 
     public boolean isBlocking() {
         KillAura killAura = KillAura.INSTANCE;
-        return (killAura.isEnabled() && killAura.target != null) || (isBlockableWeapon(mc.player.getMainHandItem()) && mc.options.keyUse.isDown());
+        return (killAura.isEnabled() && killAura.target != null)
+                || TpAura.INSTANCE.isRenderBlock()
+                || (isBlockableWeapon(mc.player.getMainHandItem()) && mc.options.keyUse.isDown());
     }
 
     public boolean shouldApplyBlockingAnimation(InteractionHand hand, ItemStack itemStack) {

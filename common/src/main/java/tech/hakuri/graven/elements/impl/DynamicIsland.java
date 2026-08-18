@@ -6,6 +6,9 @@ import com.github.slmpc.lumingraphics.ui.geometry.UiRect;
 import com.github.slmpc.lumingraphics.ui.text.UiTextMetrics;
 import com.github.slmpc.lumingraphics.ui.tree.UiTree;
 import net.minecraft.client.DeltaTracker;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.multiplayer.ServerData;
@@ -17,6 +20,9 @@ import tech.hakuri.graven.elements.impl.notification.Notifications;
 import tech.hakuri.graven.gui.dropdown.DropdownScreen;
 import tech.hakuri.graven.gui.theme.OpalIslandStyle;
 import tech.hakuri.graven.managers.Managers;
+import tech.hakuri.graven.managers.impl.music.MusicPlaybackState;
+import tech.hakuri.graven.managers.impl.music.MusicPlayerSnapshot;
+import tech.hakuri.graven.modules.impl.player.MusicPlayer;
 import tech.hakuri.graven.utils.render.animation.Animation;
 import tech.hakuri.graven.utils.render.animation.Easing;
 
@@ -24,6 +30,7 @@ import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.nio.file.Files;
 
 /** 顶部动态岛；内容状态遵循搜索、通知、默认信息的优先级。 */
 public final class DynamicIsland extends HudModule {
@@ -47,6 +54,9 @@ public final class DynamicIsland extends HudModule {
     private final Animation widthAnimation = new Animation(Easing.DYNAMIC_ISLAND, OpalIslandStyle.ANIMATION_DURATION);
     private final Animation heightAnimation = new Animation(Easing.DYNAMIC_ISLAND, OpalIslandStyle.ANIMATION_DURATION);
     private boolean positioned;
+    private Identifier musicCoverId;
+    private DynamicTexture musicCoverTexture;
+    private java.nio.file.Path failedMusicCoverPath;
 
     private DynamicIsland() {
         super("Dynamic Island", 0.0f, OpalIslandStyle.TOP, OpalIslandStyle.DEFAULT_WIDTH, DEFAULT_HEIGHT);
@@ -59,6 +69,12 @@ public final class DynamicIsland extends HudModule {
     protected void resetCustomState() {
         setAnchorState(HorizontalAnchor.Center, VerticalAnchor.Top, 0.0f, OpalIslandStyle.TOP);
         positioned = false;
+        if (musicCoverId != null) {
+            mc.getTextureManager().release(musicCoverId);
+            musicCoverTexture = null;
+            musicCoverId = null;
+        }
+        failedMusicCoverPath = null;
     }
 
     @Override
@@ -109,6 +125,21 @@ public final class DynamicIsland extends HudModule {
     }
 
     private IslandLayout defaultLayout(UiTextMetrics metrics) {
+        MusicPlayerSnapshot music = Managers.MUSIC == null ? MusicPlayerSnapshot.empty() : Managers.MUSIC.snapshot();
+        if (MusicPlayer.INSTANCE.showOnDynamicIsland.getValue()
+                && (music.state() == MusicPlaybackState.PLAYING || music.state() == MusicPlaybackState.PAUSED)
+                && music.current() != null) {
+            String title = music.current().displayName();
+            String artist = music.current().displayArtist();
+            String lyric = MusicPlayer.INSTANCE.showLyrics.getValue() ? currentMusicLyric(music) : "";
+            float contentWidth = Math.max(metrics.textWidth(title, 0.58f, OpalIslandStyle.TITLE_FONT),
+                    metrics.textWidth(artist, 0.43f, OpalIslandStyle.BODY_FONT));
+            if (!lyric.isBlank()) contentWidth = Math.max(contentWidth,
+                    metrics.textWidth(lyric, 0.42f, OpalIslandStyle.BODY_FONT));
+            float islandHeight = lyric.isBlank() ? 42.0f : 54.0f;
+            return new IslandLayout(Math.min(360.0f, Math.max(190.0f, 52.0f + contentWidth)), islandHeight,
+                    title, artist, "", "", "");
+        }
         String brand = Constants.NAME;
         String releaseType = translated("release type", "CLIENT");
         String version = Constants.VERSION;
@@ -144,6 +175,13 @@ public final class DynamicIsland extends HudModule {
     }
 
     private void renderDefault(UiTree.Scope scope, IslandLayout layout, float progress) {
+        MusicPlayerSnapshot music = Managers.MUSIC == null ? MusicPlayerSnapshot.empty() : Managers.MUSIC.snapshot();
+        if (MusicPlayer.INSTANCE.showOnDynamicIsland.getValue()
+                && (music.state() == MusicPlaybackState.PLAYING || music.state() == MusicPlaybackState.PAUSED)
+                && music.current() != null) {
+            renderMusic(scope, layout, music, progress);
+            return;
+        }
         Color text = alpha(OpalIslandStyle.TEXT, progress);
         Color muted = alpha(OpalIslandStyle.MUTED_TEXT, progress);
         Color accentStart = alpha(OpalIslandStyle.ACCENT_START, progress);
@@ -181,6 +219,70 @@ public final class DynamicIsland extends HudModule {
                 SECONDARY_TEXT_SCALE, text, OpalIslandStyle.TITLE_FONT);
         scope.text(layout.serverPing(), serverX, y + 15.5f,
                 FOOTER_TEXT_SCALE, muted, OpalIslandStyle.BODY_FONT);
+    }
+
+    private void renderMusic(UiTree.Scope scope, IslandLayout layout, MusicPlayerSnapshot music, float progress) {
+        ensureMusicCover();
+        UiTextMetrics metrics = MinecraftUiRuntime2612.current().textMetrics();
+        float iconSize = 30.0f;
+        if (MusicPlayer.INSTANCE.showCover.getValue() && musicCoverId != null) {
+            scope.texture(musicCoverId.toString(), new UiRect(x + 6.0f, y + 6.0f, iconSize, iconSize), 6.0f, 6.0f, 6.0f, 6.0f, 0, 0, 1, 1, alpha(Color.WHITE, progress));
+        } else {
+            scope.roundRect(x + 6.0f, y + 6.0f, iconSize, iconSize, 6.0f, alpha(OpalIslandStyle.ACCENT_START, progress));
+            float iconScale = 0.82f;
+            float iconWidth = metrics.textWidth(IconChars.MUSIC_NOTE, iconScale, OpalIslandStyle.ICON_FONT);
+            float iconHeight = metrics.textHeight(iconScale, OpalIslandStyle.ICON_FONT);
+            scope.text(IconChars.MUSIC_NOTE, x + 6.0f + (iconSize - iconWidth) / 2.0f,
+                    y + 6.0f + (iconSize - iconHeight) / 2.0f - 1.0f, iconScale,
+                    alpha(Color.WHITE, progress), OpalIslandStyle.ICON_FONT);
+        }
+        float textX = x + 42.0f;
+        float textWidth = layout.width() - 48.0f;
+        scope.text(fit(metrics, layout.brand(), 0.58f, OpalIslandStyle.TITLE_FONT, textWidth), textX, y + 6.0f,
+                0.58f, alpha(OpalIslandStyle.TEXT, progress), OpalIslandStyle.TITLE_FONT);
+        scope.text(fit(metrics, layout.releaseType(), 0.43f, OpalIslandStyle.BODY_FONT, textWidth), textX, y + 17.0f,
+                0.43f, alpha(OpalIslandStyle.MUTED_TEXT, progress), OpalIslandStyle.BODY_FONT);
+        String lyric = MusicPlayer.INSTANCE.showLyrics.getValue() ? currentMusicLyric(music) : "";
+        if (!lyric.isBlank()) scope.text(fit(metrics, lyric, 0.42f, OpalIslandStyle.BODY_FONT, textWidth), textX, y + 31.0f,
+                0.42f, alpha(OpalIslandStyle.MUTED_TEXT, progress), OpalIslandStyle.BODY_FONT);
+        float ratio = music.durationMs() <= 0L ? 0.0f
+                : Mth.clamp(music.positionMs() / (float) music.durationMs(), 0.0f, 1.0f);
+        float barWidth = Math.max(1.0f, layout.width() - 48.0f);
+        float barY = y + layout.height() - 5.0f;
+        scope.roundRect(textX, barY, barWidth, 1.5f, 0.75f,
+                alpha(OpalIslandStyle.MUTED_TEXT, 0.30f * progress));
+        scope.roundRect(textX, barY, barWidth * ratio, 1.5f, 0.75f,
+                alpha(OpalIslandStyle.ACCENT_START, progress));
+    }
+
+    private void ensureMusicCover() {
+        if (Managers.MUSIC == null || !MusicPlayer.INSTANCE.showCover.getValue()) return;
+        java.nio.file.Path path = Managers.MUSIC.currentCoverPath();
+        if (path == null || !Files.isRegularFile(path)) return;
+        if (path.equals(failedMusicCoverPath)) return;
+        Identifier id = Identifier.fromNamespaceAndPath("graven", "music_cover/" + path.getFileName().toString().replace('.', '_'));
+        if (id.equals(musicCoverId)) return;
+        try (var input = Files.newInputStream(path)) {
+            NativeImage image = NativeImage.read(input);
+            DynamicTexture texture = new DynamicTexture(() -> "Graven music cover", image);
+            if (musicCoverId != null) mc.getTextureManager().release(musicCoverId);
+            mc.getTextureManager().register(id, texture);
+            musicCoverTexture = texture;
+            musicCoverId = id;
+            failedMusicCoverPath = null;
+        } catch (Exception exception) {
+            failedMusicCoverPath = path;
+            Constants.LOGGER.warn("Failed to load music cover {}", path, exception);
+        }
+    }
+
+    private static String currentMusicLyric(MusicPlayerSnapshot music) {
+        String lyric = "";
+        for (var line : music.lyrics().lines()) {
+            if (line.timeMs() > music.positionMs()) break;
+            lyric = line.translation().isBlank() ? line.text() : line.text() + "  " + line.translation();
+        }
+        return lyric;
     }
 
     private void renderNotifications(UiTree.Scope scope, UiTextMetrics metrics, List<Notification> notifications,

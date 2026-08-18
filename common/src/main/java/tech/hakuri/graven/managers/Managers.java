@@ -8,12 +8,14 @@ import tech.hakuri.graven.managers.impl.TimerManager;
 import tech.hakuri.graven.managers.impl.OpenZenTickRateController;
 import tech.hakuri.graven.managers.impl.network.ClientboundPacketManager;
 import tech.hakuri.graven.managers.impl.network.PacketQueueManager;
+import tech.hakuri.graven.managers.impl.network.RemixBlinkManager;
 import tech.hakuri.graven.managers.impl.network.ServerboundPacketManager;
 import tech.hakuri.graven.managers.impl.rotations.RotationManager;
 import tech.hakuri.graven.managers.impl.rotations.SilentRotationManager;
 import tech.hakuri.graven.managers.impl.rotations.SnapRotationManager;
 import tech.hakuri.graven.managers.impl.sound.SoundManager;
 import tech.hakuri.graven.managers.impl.target.TargetManager;
+import tech.hakuri.graven.managers.impl.music.MusicPlayerManager;
 import tech.hakuri.graven.modules.impl.ClientSetting;
 
 public class Managers {
@@ -24,11 +26,13 @@ public class Managers {
     public static ServerboundPacketManager C2SPACKET;
     public static ClientboundPacketManager S2CPACKET;
     public static PacketQueueManager PACKET_QUEUE;
+    public static RemixBlinkManager REMIX_BLINK;
     public static FriendManager FRIEND;
     public static SoundManager SOUND;
     public static NotificationManager NOTIFICATION;
     public static TimerManager TIMER;
     public static OpenZenTickRateController OPENZEN_TICK_RATE;
+    public static MusicPlayerManager MUSIC;
 
     public static void initManagers() {
         switchRotationManager(ClientSetting.INSTANCE.rotationMode.getValue());
@@ -37,11 +41,13 @@ public class Managers {
         C2SPACKET = new ServerboundPacketManager();
         S2CPACKET = new ClientboundPacketManager();
         PACKET_QUEUE = new PacketQueueManager();
+        REMIX_BLINK = new RemixBlinkManager();
         FRIEND = new FriendManager();
         SOUND = new SoundManager();
         NOTIFICATION = new NotificationManager();
         TIMER = new TimerManager();
         OPENZEN_TICK_RATE = new OpenZenTickRateController();
+        MUSIC = MusicPlayerManager.INSTANCE;
     }
 
     public static void switchRotationManager(RotationManager.RotationMode mode) {

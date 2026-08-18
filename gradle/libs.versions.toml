@@ -20,6 +20,7 @@ luaj = "3.0.1"
 sodium = "0.8.12+mc26.1.2"
 lumin-graphics = "1.2.5"
 prism-rhi = "0.2.2"
+jcodec = "0.2.5"
 
 [libraries]
 minecraft = { module = "com.mojang:minecraft", version.ref = "project-minecraft" }
@@ -40,6 +41,8 @@ lumin-graphics-mc-common-v2612 = { module = "com.github.slmpc.lumingraphics.mc:m
 lumin-graphics-mc-bridge-contract = { module = "com.github.slmpc.lumingraphics.mc:bridge-contract", version.ref = "lumin-graphics" }
 prism-rhi-backend-opengl41 = { module = "com.github.slmpc.prismrhi:prism-rhi-backend-opengl41", version.ref = "prism-rhi" }
 prism-rhi-backend-opengl46 = { module = "com.github.slmpc.prismrhi:prism-rhi-backend-opengl46", version.ref = "prism-rhi" }
+jcodec = { module = "org.jcodec:jcodec", version.ref = "jcodec" }
+jcodec-javase = { module = "org.jcodec:jcodec-javase", version.ref = "jcodec" }
 
 [plugins]
 fabric-loom = { id = "net.fabricmc.fabric-loom", version.ref = "fabric-loom" }

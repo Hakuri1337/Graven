@@ -5,9 +5,11 @@ import tech.hakuri.graven.events.bus.EventPriority;
 import tech.hakuri.graven.events.impl.*;
 import tech.hakuri.graven.utils.rotation.Priority;
 import tech.hakuri.graven.utils.rotation.Rot2f;
+import tech.hakuri.graven.utils.rotation.RaytraceUtils;
 import tech.hakuri.graven.utils.rotation.RotationUtils;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerRotationPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.HitResult;
 
@@ -193,6 +195,22 @@ public abstract class RotationManager {
         return hasActiveRotation() && rotationHitResult != null ? rotationHitResult : mc.hitResult;
     }
 
+    /**
+     * 按当前托管旋转和调用方指定的距离重新计算逻辑命中结果。
+     *
+     * <p>原版 {@code raycastHitResult} 使用玩家的实体交互距离，Kill Aura 的攻击距离设置需要独立覆盖这个默认值，
+     * 同时不能改写屏幕准星或其他模块共享的缓存结果。</p>
+     *
+     * @param range 本次逻辑命中的最大距离
+     * @return 指定距离下的逻辑命中结果
+     */
+    public HitResult getHitResult(double range) {
+        if (!hasActiveRotation() || mc.player == null || mc.level == null) {
+            return mc.hitResult;
+        }
+        return RaytraceUtils.raytrace(rotations, Math.max(0.0, range));
+    }
+
     public boolean isActive() {
         return active;
     }
@@ -246,6 +264,15 @@ public abstract class RotationManager {
     protected void onPacketReceive(PacketEvent.Receive event) {
         if (event.getPacket() instanceof ClientboundPlayerPositionPacket || event.getPacket() instanceof ClientboundPlayerRotationPacket) {
             s08 = true;
+        }
+    }
+
+    /** Remix 的旋转管线保留额外整圈 yaw，Derp 及普通托管旋转都经过该包级规范化。 */
+    @EventHandler
+    protected void onPacketSend(PacketEvent.Send event) {
+        if (event.getPacket() instanceof ServerboundMovePlayerPacket movePacket) {
+            float yaw = movePacket.getYRot(0.0F);
+            if (yaw > -360.0F && yaw < 360.0F) movePacket.yRot = yaw + 720.0F;
         }
     }
 

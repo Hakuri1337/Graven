@@ -33,6 +33,30 @@
         "options": "Options",
         "quit": "Quit"
       },
+      "music": {
+        "title": "Music Player",
+        "search_placeholder": "Search songs",
+        "search_action": "Search",
+        "nothing_playing": "Nothing playing",
+        "play": "Play",
+        "pause": "Pause",
+        "close": "Close",
+        "loading": "Loading...",
+        "playing": "Playing",
+        "paused": "Paused",
+        "search_hint": "Enter a song name and press Enter",
+        "results": "results",
+        "playlist_id": "Playlist ID",
+        "import_playlist": "Import playlist",
+        "previous": "Previous",
+        "next": "Next",
+        "list_loop": "List loop",
+        "single_loop": "Single loop",
+        "shuffle": "Shuffle",
+        "lyrics": "Lyrics",
+        "no_lyrics": "No lyrics",
+        "seeking": "Seeking..."
+      },
       "tab": {
         "general": "General",
         "friend": "Friend",
@@ -313,7 +337,8 @@
           "sea_level": "Sea Level",
           "planet": "Planet",
           "black_hole": "Black Hole",
-          "minecraft": "Minecraft"
+          "minecraft": "Minecraft",
+          "new": "New"
         },
         "show welcome screen": "Show Welcome Screen",
         "enable lua scripts": "Enable Lua Scripts",
@@ -362,23 +387,6 @@
         "fake staff detected": "Fake Staff Detected! ({name})",
         "debug marker 11": "Debug marker 11",
         "debug marker 1": "Debug marker 1"
-      },
-      "anti kb": {
-        "_value": "Anti KB",
-        "mode": {
-          "_value": "Mode",
-          "noxz": "NoXZ",
-          "jumpreset": "Jump Reset",
-          "mix": "Mix"
-        },
-        "rotate": "Rotate",
-        "follow direction": "Follow Direction",
-        "try attack": "Try Attack",
-        "movement override": "Movement Override",
-        "rotate ticks": "Rotate Ticks",
-        "attack amount": "Attack Amount",
-        "instant attack": "Instant Attack",
-        "sprint state check": "Sprint State Check"
       },
       "autothrow": {
         "_value": "Auto Throw",
@@ -741,10 +749,12 @@
           "multiple": "Multiple"
         },
         "aim range": "Aim Range",
+        "range": "Range",
         "fov": "FOV",
         "rotation speed": "Rotation Speed",
         "min cps": "Min CPS",
         "max cps": "Max CPS",
+        "heypixel keepsprint": "Heypixel KeepSprint",
         "player": "Player",
         "mob": "Mob",
         "animal": "Animal",
@@ -1141,6 +1151,18 @@
           "xin_2b2t": "2b2t.xin"
         }
       },
+      "auto run away": {
+        "_value": "Auto Run Away",
+        "health": "Health",
+        "command": {
+          "_value": "Command",
+          "hub": "/hub",
+          "again": "/again"
+        }
+      },
+      "music player": {
+        "_value": "Music Player"
+      },
       "follower": {
         "_value": "Follower",
         "mode": {
@@ -1455,8 +1477,18 @@
         "mode": {
           "_value": "Mode",
           "cancel": "Cancel",
-          "legit": "Legit"
+          "legit": "Legit",
+          "grim": "Grim"
         },
+        "grim mode": {
+          "_value": "Grim Mode",
+          "pertick": "Per Tick",
+          "onetime": "One Time"
+        },
+        "attacks": "Attacks",
+        "jump reset": "Jump Reset",
+        "jump tick": "Jump Tick",
+        "logging": "Logging",
         "server motion": "Server Motion",
         "explosion": "Explosion",
         "explosion only block": "Explosion Only Block",
@@ -1926,7 +1958,72 @@
         "quartz": "Quartz",
         "water": "Water",
         "lava": "Lava"
-      }
+      },
+      "targetstrafe": {
+        "_value": "TargetStrafe",
+        "mode": { "_value": "Mode", "adaptive": "Adaptive", "behind": "Behind" },
+        "distance": "Distance",
+        "points": "Points",
+        "require space key": "Require Space Key",
+        "auto 3rd person": "Auto 3rd Person"
+      },
+      "tpaura": {
+        "_value": "TpAura",
+        "mode": { "_value": "Mode", "cubecraft": "CubeCraft", "vanilla": "Vanilla", "paper": "Paper" },
+        "priority": { "_value": "Priority", "distance": "Distance", "health": "Health", "livingtime": "Living Time", "armor": "Armor" },
+        "range": "Range", "step size": "Step Size", "packets/tick": "Packets/Tick", "vclip": "VClip", "prev": "Prev",
+        "prewarm packets": "Prewarm Packets", "prewarm count": "Prewarm Count", "random offset": "Random Offset",
+        "offset xz": "Offset XZ", "offset y": "Offset Y", "safe target fallback": "Safe Target Fallback",
+        "rotate": "Rotate", "swing": "Swing", "fake autoblock": "Fake AutoBlock", "use mace": "Use Mace",
+        "use cooldown": "Use Cooldown", "cooldown base": "Cooldown Base", "attack delay": "Attack Delay",
+        "attack times": "Attack Times", "pre-attack delay": "Pre-Attack Delay", "return delay ticks": "Return Delay Ticks",
+        "try miss totem": "Try Miss Totem", "cancel ping packets": "Cancel Ping Packets", "disable on lagback": "Disable on Lagback",
+        "render pos scale": "Render Pos Scale",
+        "highlight target": { "_value": "Highlight Target", "off": "Off", "twod": "2D", "glow": "Glow" },
+        "render pos": "Render Pos", "render pos color": "Render Pos Color", "render trail": "Render Trail", "render trail color": "Render Trail Color"
+      },
+      "tpauraplus": {
+        "_value": "TpAuraPlus",
+        "priority": { "_value": "Priority", "distance": "Distance", "health": "Health", "livingtime": "Living Time", "armor": "Armor" },
+        "range": "Range", "step size": "Step Size", "packets/tick": "Packets/Tick", "vclip": "VClip", "prev": "Prev",
+        "safe target fallback": "Safe Target Fallback", "random offset": "Random Offset", "offset xz": "Offset XZ", "offset y": "Offset Y",
+        "rotate": "Rotate", "swing": "Swing", "use mace": "Use Mace", "use cooldown": "Use Cooldown",
+        "cooldown base": "Cooldown Base", "attack delay": "Attack Delay", "attack times": "Attack Times",
+        "pre-attack delay": "Pre-Attack Delay", "return delay ticks": "Return Delay Ticks", "try miss totem": "Try Miss Totem",
+        "disable on lagback": "Disable on Lagback", "anti teleport": "Anti Teleport", "render trail": "Render Trail", "render trail color": "Render Trail Color"
+      },
+      "tpaurarise": {
+        "_value": "TpauraRise",
+        "mode": { "_value": "Mode", "teleportaura": "TeleportAura", "watchdog": "Watchdog" },
+        "targets": { "_value": "Targets", "single": "Single", "multiple": "Multiple" },
+        "range": "Range", "min cps": "Min CPS", "max cps": "Max CPS", "1.9 cooldown": "1.9 Cooldown",
+        "step size": "Step Size", "packets/tick": "Packets/Tick", "render path": "Render Path",
+        "players": "Players", "hostile": "Hostile", "invisibles": "Invisibles", "teammates": "Teammates"
+      },
+      "antivoid": {
+        "_value": "AntiVoid",
+        "mode": { "_value": "Mode", "blink": "Blink", "flag": "Flag", "ghostblock": "Ghost Block" },
+        "void level": "Void Level", "fall distance": "Fall Distance", "flag height": "Flag Height", "silent": "Silent"
+      },
+      "autogapple": { "_value": "AutoGapple", "health": "Health" },
+      "clicktp": { "_value": "ClickTP", "max distance": "Max Distance", "step distance": "Step Distance", "render box": "Render Box" },
+      "cubecraftdisbaler": {
+        "_value": "CubeCraftDisbaler", "hold time": "Hold Time", "force ground": "Force Ground",
+        "cancel bad packets": "Cancel Bad Packets", "transaction spoof": "Transaction Spoof", "verbose": "Verbose"
+      },
+      "derp": { "_value": "Derp", "spin speed": "Spin Speed", "pitch": "Pitch", "priority": "Priority" },
+      "regen": {
+        "_value": "Regen", "health": "Health", "packets/tick": "Packets/Tick",
+        "regen mode": { "_value": "Regen Mode", "normal": "Normal", "anticheat": "AntiCheat" },
+        "min packets": "Min Packets", "max packets": "Max Packets", "delay min": "Delay Min", "delay max": "Delay Max",
+        "randomize packets": "Randomize Packets", "randomize position": "Randomize Position", "position offset": "Position Offset",
+        "simulate reaction": "Simulate Reaction", "reaction delay": "Reaction Delay", "simulate key jitter": "Simulate Key Jitter", "pause chance": "Pause Chance"
+      },
+      "targets": {
+        "_value": "Targets", "player": "Player", "dead": "Dead", "villager": "Villager",
+        "invisible": "Invisible", "mob": "Mob", "animal": "Animal"
+      },
+      "itemphysics": { "_value": "ItemPhysics" }
     },
     "elements": {
       "dynamic island": {

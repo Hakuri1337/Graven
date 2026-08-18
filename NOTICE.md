@@ -59,6 +59,17 @@ SOFTWARE.
 The original code has been modified and adapted for Graven's module,
 setting, rendering, inventory, and event systems.
 
+## FFmpeg
+
+- Repository: [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg)
+- Embedded binary: FFmpeg 8.1.2 full build for Windows x64
+- License: GNU General Public License v3.0 or later
+- Used in Graven: Windows-only decoding of the MainMenu `New` video background.
+
+The Windows executable is bundled as `graven/native/windows-x86_64/ffmpeg.exe`.
+It is extracted only into the user's `.graven/native/` directory and is never
+resolved from the system `PATH`.
+
 LeavesHack is licensed under the GNU Affero General Public License v3.0. The
 GNU GPLv3 and GNU AGPLv3 include compatibility terms for combining GPLv3 and
 AGPLv3 works; the AGPLv3 network-interaction source requirements apply where

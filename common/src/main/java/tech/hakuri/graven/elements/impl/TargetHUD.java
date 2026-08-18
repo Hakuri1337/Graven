@@ -8,6 +8,9 @@ import com.github.slmpc.lumingraphics.mc.v2612.runtime.MinecraftUiRuntime2612;
 import tech.hakuri.graven.gui.hudeditor.HudEditorScreen;
 import com.github.slmpc.lumingraphics.ui.geometry.UiRect;
 import com.github.slmpc.lumingraphics.ui.tree.UiTree;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import tech.hakuri.graven.managers.Managers;
 import tech.hakuri.graven.modules.impl.combat.KillAura;
 import tech.hakuri.graven.settings.impl.BoolSetting;
@@ -18,6 +21,7 @@ import tech.hakuri.graven.utils.render.animation.Animation;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -184,7 +188,6 @@ public class TargetHUD extends HudModule {
         float finalHeadX = scaledHeadX + (scaledHeadSize - finalHeadSize) / 2.0f;
         float finalHeadY = scaledHeadY + (scaledHeadSize - finalHeadSize) / 2.0f;
         float finalHeadRadius = scaledHeadRadius * headDamageScale;
-        Color headTintColor = withAlpha(tintColor(Color.WHITE, damageProgress), animationScale);
 
         MinecraftUiRuntime2612.current().applyBlur(MinecraftBlurRegion2612.rounded(
                 new UiRect(scaledPanelX, scaledPanelY, scaledPanelWidth, scaledPanelHeight),
@@ -211,19 +214,7 @@ public class TargetHUD extends HudModule {
             );
         }
 
-        if (target instanceof AbstractClientPlayer player) {
-            String skin = player.getSkin().body().texturePath().toString();
-            UiRect head = new UiRect(finalHeadX, finalHeadY, finalHeadSize, finalHeadSize);
-            if (isLuminTextureAvailable(skin)) {
-                scope.texture(skin, head, finalHeadRadius, finalHeadRadius, finalHeadRadius, finalHeadRadius,
-                        8f / 64f, 8f / 64f, 16f / 64f, 16f / 64f, lumin(headTintColor));
-                scope.texture(skin, head, finalHeadRadius, finalHeadRadius, finalHeadRadius, finalHeadRadius,
-                        40f / 64f, 8f / 64f, 48f / 64f, 16f / 64f, lumin(headTintColor));
-            } else {
-                scope.roundRect(finalHeadX, finalHeadY, finalHeadSize, finalHeadSize, finalHeadRadius,
-                        lumin(withAlpha(tintColor(new Color(80, 80, 80, 200), damageProgress), animationScale)));
-            }
-        }
+        // 玩家头像在 overlay 阶段使用 NEAREST 采样，避免 Lumin 默认 LINEAR 放大 8x8 面部区域。
 
         scope.text(nameText, scaledTextStartX, scaledContentY, scaledTextScale, lumin(withAlpha(textColor.getValue(), animationScale)));
         scope.text(healthText, scaledHealthTextX, scaledContentY, scaledTextScale, lumin(withAlpha(textColor.getValue(), animationScale)));
@@ -335,28 +326,10 @@ public class TargetHUD extends HudModule {
         float headSize = 19.5f * panelScale;
         float headRadius = 2.0f * panelScale;
         float damageProgress = Mth.clamp(target.hurtTime / (float) Math.max(1, target.hurtDuration), 0.0f, 1.0f);
-        Color headTint = withAlpha(tintColor(Color.WHITE, damageProgress), visibility);
-        if (target instanceof AbstractClientPlayer player) {
-            String skin = player.getSkin().body().texturePath().toString();
-            UiRect headRect = new UiRect(headX, headY, headSize, headSize);
-            if (isLuminTextureAvailable(skin)) {
-                scope.texture(skin, headRect, headRadius, headRadius, headRadius, headRadius,
-                        8f / 64f, 8f / 64f, 16f / 64f, 16f / 64f, lumin(headTint));
-                scope.texture(skin, headRect, headRadius, headRadius, headRadius, headRadius,
-                        40f / 64f, 8f / 64f, 48f / 64f, 16f / 64f, lumin(headTint));
-            } else {
-                scope.roundRect(headX, headY, headSize, headSize, headRadius,
-                        lumin(OpalHudStyle.withAlpha(new Color(80, 80, 80, 200), visibility)));
-            }
-        } else {
+        if (!(target instanceof AbstractClientPlayer)) {
             scope.roundRect(headX, headY, headSize, headSize, headRadius,
                     lumin(OpalHudStyle.withAlpha(new Color(80, 80, 80, 200), visibility)));
         }
-    }
-
-    private boolean isLuminTextureAvailable(String textureId) {
-        Identifier identifier = Identifier.tryParse(textureId);
-        return identifier != null && mc.getResourceManager().getResource(identifier).isPresent();
     }
 
     @Override
@@ -396,7 +369,17 @@ public class TargetHUD extends HudModule {
         float scaledEquipmentY = Mth.lerp(animationScale, centerY, equipmentY);
         float scaledEquipmentScale = equipmentScale * animationScale;
         float scaledEquipmentGap = equipmentGap * animationScale;
+        float scaledHeadX = Mth.lerp(animationScale, centerX, headX);
+        float scaledHeadY = Mth.lerp(animationScale, centerY, headY);
+        float scaledHeadSize = headSize * animationScale;
+        float damageProgress = Easing.EASE_OUT_SINE.getFunction().apply(Mth.clamp(target.hurtTime / 10.0f, 0.0f, 1.0f));
+        float finalHeadSize = scaledHeadSize * (1.0f - damageProgress * HEAD_DAMAGE_SCALE_FACTOR);
+        float finalHeadX = scaledHeadX + (scaledHeadSize - finalHeadSize) / 2.0f;
+        float finalHeadY = scaledHeadY + (scaledHeadSize - finalHeadSize) / 2.0f;
 
+        if (target instanceof AbstractClientPlayer player) {
+            renderPlayerHead(graphics, player, finalHeadX, finalHeadY, finalHeadSize);
+        }
         renderEquipmentItems(graphics, target, scaledEquipmentX, scaledEquipmentY, scaledEquipmentScale, scaledEquipmentGap);
     }
 
@@ -405,6 +388,12 @@ public class TargetHUD extends HudModule {
         if (target == null || visibilityProgress <= 0.01f) return;
         float panelScale = scale.getValue().floatValue();
         float visibility = Easing.EASE_OUT_EXPO.getFunction().apply(Mth.clamp(visibilityProgress, 0.0f, 1.0f));
+        if (target instanceof AbstractClientPlayer player) {
+            renderPlayerHead(graphics, player,
+                    x + (OPAL_PADDING + 0.25f) * panelScale,
+                    y + OPAL_PADDING * panelScale,
+                    19.5f * panelScale);
+        }
         List<ItemStack> equipment = opalEquipment(target);
         float itemScale = 0.625f * panelScale * visibility;
         float itemY = y + (OPAL_PADDING + 8.5f) * panelScale;
@@ -461,6 +450,27 @@ public class TargetHUD extends HudModule {
         graphics.pose().scale(guiScale, guiScale);
         graphics.item(owner, stack, 0, 0, seed);
         graphics.pose().popMatrix();
+    }
+
+    private void renderPlayerHead(GuiGraphicsExtractor graphics, AbstractClientPlayer player,
+                                  float projectionX, float projectionY, float projectionSize) {
+        Identifier skinId = player.getSkin().body().texturePath();
+        AbstractTexture skinTexture = mc.getTextureManager().getTexture(skinId);
+        GpuTextureView view = skinTexture.getTextureView();
+        if (view == null || view.texture().getWidth(0) < 64 || view.texture().getHeight(0) < 32) {
+            return;
+        }
+
+        int x0 = (int) Math.round(UiCoordinateMapper.toMinecraftX(projectionX));
+        int y0 = (int) Math.round(UiCoordinateMapper.toMinecraftY(projectionY));
+        int x1 = Math.max(x0 + 1, (int) Math.round(UiCoordinateMapper.toMinecraftX(projectionX + projectionSize)));
+        int y1 = Math.max(y0 + 1, (int) Math.round(UiCoordinateMapper.toMinecraftY(projectionY + projectionSize)));
+        var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
+
+        graphics.blit(view, sampler, x0, y0, x1, y1,
+                8f / 64f, 16f / 64f, 8f / 64f, 16f / 64f);
+        graphics.blit(view, sampler, x0, y0, x1, y1,
+                40f / 64f, 48f / 64f, 8f / 64f, 16f / 64f);
     }
 
     private LivingEntity resolveTarget() {

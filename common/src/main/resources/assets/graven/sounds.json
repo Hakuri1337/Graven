@@ -53,5 +53,13 @@
     "sounds": [
       "graven:moan4"
     ]
+  },
+  "music_remote": {
+    "sounds": [
+      {
+        "name": "graven:music/remote",
+        "stream": true
+      }
+    ]
   }
 }

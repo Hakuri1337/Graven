@@ -806,6 +806,7 @@ public class ConfigHolder {
         resetExternalSettingHostsToDefaults();
         applyToAddons(addons);
         applyToExternalSettingHosts();
+        migrateRemovedCubeCraftDisabler(getActiveConfigStorageDir());
         applyToModules(modules);
         loadExternalSettingHostStates();
         loadFriends(getActiveConfigStorageDir());
@@ -1035,6 +1036,64 @@ public class ConfigHolder {
         migrateLegacyOwnerFiles(defaultConfigDir);
         migrateLegacyOwnersInAllConfigs();
         migrateLegacyFriendsIfNeeded(defaultConfigDir);
+    }
+
+    /** 将旧版独立 CubeCraftDisbaler 的启用状态迁移到 Disabler.CubeCraft 模式。 */
+    private void migrateRemovedCubeCraftDisabler(Path configStorageDir) throws IOException {
+        Path legacyFile = configStorageDir.resolve("graven").resolve("CubeCraftDisbaler.json");
+        if (!Files.exists(legacyFile)) {
+            return;
+        }
+
+        Path disablerFile = configStorageDir.resolve("graven").resolve("Disabler.json");
+        JsonObject legacy;
+        try {
+            JsonElement parsed = JsonParser.parseString(Files.readString(legacyFile, StandardCharsets.UTF_8));
+            if (parsed == null || !parsed.isJsonObject()) {
+                return;
+            }
+            legacy = parsed.getAsJsonObject();
+        } catch (RuntimeException exception) {
+            Constants.LOGGER.error("读取已删除 CubeCraftDisbaler 配置失败: {}", legacyFile, exception);
+            return;
+        }
+
+        JsonObject disabler;
+        if (Files.exists(disablerFile)) {
+            try {
+                JsonElement parsed = JsonParser.parseString(Files.readString(disablerFile, StandardCharsets.UTF_8));
+                disabler = parsed != null && parsed.isJsonObject() ? parsed.getAsJsonObject() : new JsonObject();
+            } catch (RuntimeException exception) {
+                Constants.LOGGER.error("读取 Disabler 配置失败: {}", disablerFile, exception);
+                return;
+            }
+        } else {
+            disabler = new JsonObject();
+        }
+
+        JsonObject settings = getObject(disabler, "settings");
+        if (settings == null) {
+            settings = new JsonObject();
+            disabler.add("settings", settings);
+        }
+        if (settings.has("Mode")) {
+            return;
+        }
+
+        settings.addProperty("Mode", "CubeCraft");
+        if (legacy.has("enabled") && legacy.get("enabled").isJsonPrimitive()
+                && legacy.get("enabled").getAsBoolean()) {
+            disabler.addProperty("enabled", true);
+        }
+        if (!disabler.has("version")) disabler.addProperty("version", CONFIG_VERSION);
+        if (!disabler.has("keyBind") && legacy.has("keyBind")) disabler.add("keyBind", legacy.get("keyBind"));
+        if (!disabler.has("bindMode") && legacy.has("bindMode")) disabler.add("bindMode", legacy.get("bindMode"));
+        if (!disabler.has("hidden") && legacy.has("hidden")) disabler.add("hidden", legacy.get("hidden"));
+
+        Files.createDirectories(disablerFile.getParent());
+        Files.writeString(disablerFile, gson.toJson(disabler), StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+        Constants.LOGGER.info("已将旧 CubeCraftDisbaler 配置迁移到 Disabler 的 CubeCraft 模式: {}", disablerFile);
     }
 
     private void migrateLegacyDirectoryIfNeeded() throws IOException {

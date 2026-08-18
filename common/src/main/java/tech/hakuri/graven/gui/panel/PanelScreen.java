@@ -215,10 +215,23 @@ public class PanelScreen extends Screen {
         popupHost.render(guiGraphics, scene.batch(UiLayer.POPUP), mouseX, mouseY, partialTick);
     }
 
+    /**
+     * Minecraft 可以在首个渲染状态提取前派发输入事件。子面板在该提取阶段才依赖
+     * runtime 的文字度量创建，因此就绪前不得将事件分发给它们。
+     */
+    private boolean panelsReady() {
+        return categoryRailPanel != null
+                && moduleListPanel != null
+                && moduleDetailPanel != null
+                && clientSettingPanel != null;
+    }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean isDoubleClick) {
         MouseButtonEvent gravenEvent = UiCoordinateMapper.toProjectionEvent(event);
+        if (!panelsReady()) {
+            return super.mouseClicked(gravenEvent, isDoubleClick);
+        }
         double mouseX = gravenEvent.x();
         double mouseY = gravenEvent.y();
         if (event.button() != 0) {
@@ -271,6 +284,9 @@ public class PanelScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         double gravenMouseX = UiCoordinateMapper.toProjectionX(mouseX);
         double gravenMouseY = UiCoordinateMapper.toProjectionY(mouseY);
+        if (!panelsReady()) {
+            return super.mouseScrolled(gravenMouseX, gravenMouseY, scrollX, scrollY);
+        }
         if (popupHost.mouseScrolled(gravenMouseX, gravenMouseY, scrollX, scrollY)) {
             dirtyState.markAllDirty();
             return true;
@@ -296,6 +312,9 @@ public class PanelScreen extends Screen {
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
         MouseButtonEvent gravenEvent = UiCoordinateMapper.toProjectionEvent(event);
+        if (!panelsReady()) {
+            return super.mouseReleased(gravenEvent);
+        }
         if (inputRouter.routeMouseReleased(gravenEvent, popupHost, moduleDetailPanel, moduleListPanel, clientSettingPanel, state.isClientSettingMode())) {
             dirtyState.markAllDirty();
             return true;
@@ -308,6 +327,9 @@ public class PanelScreen extends Screen {
         MouseButtonEvent gravenEvent = UiCoordinateMapper.toProjectionEvent(event);
         double gravenDeltaX = UiCoordinateMapper.toProjectionX(deltaX);
         double gravenDeltaY = UiCoordinateMapper.toProjectionY(deltaY);
+        if (!panelsReady()) {
+            return super.mouseDragged(gravenEvent, gravenDeltaX, gravenDeltaY);
+        }
         if (inputRouter.routeMouseDragged(gravenEvent, gravenDeltaX, gravenDeltaY,
                 popupHost, moduleDetailPanel, moduleListPanel, clientSettingPanel, state.isClientSettingMode())) {
             dirtyState.markAllDirty();
@@ -318,6 +340,9 @@ public class PanelScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (!panelsReady()) {
+            return super.keyPressed(event);
+        }
         if (inputRouter.routeKeyPressed(event, popupHost, moduleDetailPanel, moduleListPanel, clientSettingPanel, state.isClientSettingMode())) {
             dirtyState.markAllDirty();
             return true;
@@ -331,6 +356,9 @@ public class PanelScreen extends Screen {
 
     @Override
     public boolean charTyped(CharacterEvent event) {
+        if (!panelsReady()) {
+            return super.charTyped(event);
+        }
         if (inputRouter.routeCharTyped(event, popupHost, moduleDetailPanel, moduleListPanel, clientSettingPanel, state.isClientSettingMode())) {
             dirtyState.markAllDirty();
             return true;
@@ -355,9 +383,9 @@ public class PanelScreen extends Screen {
         super.removed();
         popupHost.close();
         releaseScene();
-        moduleListPanel.resetTransientState();
-        moduleDetailPanel.resetTransientState();
-        clientSettingPanel.resetTransientState();
+        if (moduleListPanel != null) moduleListPanel.resetTransientState();
+        if (moduleDetailPanel != null) moduleDetailPanel.resetTransientState();
+        if (clientSettingPanel != null) clientSettingPanel.resetTransientState();
         state.setListeningKeyBindModule(null);
         state.setListeningKeybindSetting(null);
         IMEFocusHelper.forceDeactivate();

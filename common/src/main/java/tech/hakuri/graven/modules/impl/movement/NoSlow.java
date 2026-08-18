@@ -21,6 +21,7 @@ import tech.hakuri.graven.events.impl.PlayerTickEvent;
 import tech.hakuri.graven.events.impl.SlowdownEvent;
 import tech.hakuri.graven.modules.Category;
 import tech.hakuri.graven.modules.Module;
+import tech.hakuri.graven.modules.impl.combat.KillAura;
 import tech.hakuri.graven.settings.impl.BoolSetting;
 import tech.hakuri.graven.settings.impl.EnumSetting;
 import tech.hakuri.graven.settings.impl.IntSetting;
@@ -102,7 +103,7 @@ public final class NoSlow extends Module {
                 }
             } else {
                 event.setSlowdown(false);
-                if (keepSprinting.getValue()) mc.player.setSprinting(true);
+                if (keepSprinting.getValue() && !KillAura.INSTANCE.isHeypixelKeepSprintTransition()) mc.player.setSprinting(true);
             }
             return;
         }
@@ -117,7 +118,7 @@ public final class NoSlow extends Module {
             event.setSlowdown(mc.player.getUseItemRemainingTicks() % 3 != 0 || mc.player.getUseItemRemainingTicks() > 30);
         }
 
-        if (isGrimMode() && keepSprinting.getValue()) mc.player.setSprinting(true);
+        if (isGrimMode() && keepSprinting.getValue() && !KillAura.INSTANCE.isHeypixelKeepSprintTransition()) mc.player.setSprinting(true);
     }
 
     @EventHandler(priority = 150)

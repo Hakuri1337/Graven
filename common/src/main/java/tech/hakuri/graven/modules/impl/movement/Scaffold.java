@@ -131,6 +131,11 @@ public class Scaffold extends Module {
     private BlockPos blockPos;
     private Direction direction;
     private Rot2f rotation;
+    private BlockPos lastRotationTarget;
+    private Direction lastRotationFace;
+    private double lastYawDiff = Double.NaN;
+    private double lastPitchDiff = Double.NaN;
+    private int rotationJitterCounter;
     private int rotateCount = 0;
 
     private FindItemResult blockResult;
@@ -194,6 +199,7 @@ public class Scaffold extends Module {
         blockPos = null;
         direction = null;
         rotation = null;
+        resetRotationHumanization();
         rotateCount = 0;
         blockResult = null;
         shouldSwapBack = false;
@@ -202,6 +208,7 @@ public class Scaffold extends Module {
     @Override
     protected void onDisable() {
         yLevel = 0;
+        resetRotationHumanization();
         if (!nullCheck()) {
             if (shouldSwapBack) {
                 InvUtils.swapBack();
@@ -225,6 +232,7 @@ public class Scaffold extends Module {
         }
 
         getBlockInfo();
+        if (blockPos == null) resetRotationHumanization();
 
         if (skipTicks.getValue() && blockPos != null) {
             boolean reachable = true;
@@ -462,10 +470,11 @@ public class Scaffold extends Module {
                 180F,
                 calculated.getYaw()
         };
+        float referenceYaw = rotation == null ? mc.player.getYRot() - 180.0F : rotation.getYaw();
         Arrays.sort(yawArray, (a, b) ->
                 Float.compare(
-                        Math.abs(Mth.wrapDegrees(mc.player.getYRot() - 180 - a)),
-                        Math.abs(Mth.wrapDegrees(mc.player.getYRot() - 180 - b))
+                        Math.abs(Mth.wrapDegrees(referenceYaw - a)),
+                        Math.abs(Mth.wrapDegrees(referenceYaw - b))
                 )
         );
 
@@ -473,23 +482,76 @@ public class Scaffold extends Module {
 
         for (float yaw : yawArray) {
             for (float pitch : pitchArray) {
-                Rot2f candidate = new Rot2f(yaw + MathUtils.getRandom(-0.3F, 0.3F), pitch + MathUtils.getRandom(-0.3F, 0.3F));
-                boolean matches = raytrace.is(RaytraceMode.Normal) ? RaytraceUtils.overBlock(candidate, pos) : RaytraceUtils.overBlock(candidate, pos, direction);
+                Rot2f candidate = new Rot2f(yaw, pitch);
+                boolean matches = raytraceMatches(candidate, pos, direction);
                 if (matches) {
-                    return candidate;
+                    return applyRotationHumanization(candidate, pos, direction);
                 }
             }
 
             for (int pitch = -90; pitch < 90; pitch++) {
                 Rot2f candidate = new Rot2f(yaw, pitch);
-                boolean matches = raytrace.is(RaytraceMode.Normal) ? RaytraceUtils.overBlock(candidate, pos) : RaytraceUtils.overBlock(candidate, pos, direction);
+                boolean matches = raytraceMatches(candidate, pos, direction);
                 if (matches) {
-                    return candidate;
+                    return applyRotationHumanization(candidate, pos, direction);
                 }
             }
         }
 
         return calculated;
+    }
+
+    private boolean raytraceMatches(Rot2f candidate, BlockPos pos, Direction direction) {
+        return raytrace.is(RaytraceMode.Normal)
+                ? RaytraceUtils.overBlock(candidate, pos)
+                : RaytraceUtils.overBlock(candidate, pos, direction);
+    }
+
+    /**
+     * 只在 GCD 平滑导致目标角度连续停滞时加入极小修正，避免每次候选搜索都引入无关白噪声。
+     */
+    private Rot2f applyRotationHumanization(Rot2f candidate, BlockPos pos, Direction direction) {
+        if (!pos.equals(lastRotationTarget) || direction != lastRotationFace) {
+            lastRotationTarget = pos;
+            lastRotationFace = direction;
+            lastYawDiff = Double.NaN;
+            lastPitchDiff = Double.NaN;
+            return candidate;
+        }
+
+        Rot2f reference = Managers.ROTATION.getLastRotation();
+        double yawDiff = Math.abs(Mth.wrapDegrees(candidate.getYaw() - reference.getYaw()));
+        double pitchDiff = Math.abs(candidate.getPitch() - reference.getPitch());
+        boolean stuckYaw = yawDiff > 2.0D && !Double.isNaN(lastYawDiff) && Math.abs(yawDiff - lastYawDiff) < 1.0E-4D;
+        boolean stuckPitch = pitchDiff > 2.0D && !Double.isNaN(lastPitchDiff) && Math.abs(pitchDiff - lastPitchDiff) < 1.0E-4D;
+
+        Rot2f result = candidate;
+        if (stuckYaw || stuckPitch) {
+            float yawJitter = MathUtils.getRandom(0.095F, 0.19F);
+            if ((rotationJitterCounter++ & 1) == 0) yawJitter = -yawJitter;
+
+            Rot2f jittered = new Rot2f(
+                    candidate.getYaw() + yawJitter,
+                    Mth.clamp(candidate.getPitch() + MathUtils.getRandom(0.016F, 0.055F), -89.5F, 89.5F)
+            );
+            if (raytraceMatches(jittered, pos, direction)) {
+                result = jittered;
+                yawDiff = Math.abs(Mth.wrapDegrees(result.getYaw() - reference.getYaw()));
+                pitchDiff = Math.abs(result.getPitch() - reference.getPitch());
+            }
+        }
+
+        lastYawDiff = yawDiff;
+        lastPitchDiff = pitchDiff;
+        return result;
+    }
+
+    private void resetRotationHumanization() {
+        lastRotationTarget = null;
+        lastRotationFace = null;
+        lastYawDiff = Double.NaN;
+        lastPitchDiff = Double.NaN;
+        rotationJitterCounter = 0;
     }
 
     private boolean onAir() {

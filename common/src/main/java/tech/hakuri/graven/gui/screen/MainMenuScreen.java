@@ -41,6 +41,7 @@ public class MainMenuScreen extends Screen {
     private final List<MenuEntry> entries = new ArrayList<>();
 
     private LuminRenderSystem.LuminRenderTarget backgroundRenderTarget;
+    private MainMenuVideoBackground videoBackground;
     private UiScene scene;
     private MinecraftUiRuntime2612 sceneRuntime;
     private UiTextMetrics textMetrics;
@@ -83,22 +84,65 @@ public class MainMenuScreen extends Screen {
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         final var window = minecraft.getWindow();
-        if (backgroundRenderTarget == null) {
-            backgroundRenderTarget = LuminRenderSystem.LuminRenderTarget.create("main-menu-background", window.getWidth(), window.getHeight());
-        }
-
-        backgroundRenderTarget.clear();
-        backgroundRenderTarget.resize(window.getWidth(), window.getHeight());
-        LuminRenderSystem.setActiveTarget(backgroundRenderTarget);
-
         final var background = switch (ClientSetting.INSTANCE.mainMenuBackground.getValue()) {
             case SEA_LEVEL -> GlslSandBox.SEA_LEVEL;
             case PLANET -> GlslSandBox.PLANET;
             case BLACK_HOLE -> GlslSandBox.BLACK_HOLE;
             case MINECRAFT -> GlslSandBox.MINECRAFT;
+            case NEW -> null;
         };
 
-        GlslSandBox.INSTANCE.render(background, LuminRenderSystem.toGravenMouseX(mouseX), LuminRenderSystem.toGravenMouseY(mouseY));
+        if (background == null) {
+            if (videoBackground == null) videoBackground = new MainMenuVideoBackground();
+            videoBackground.start();
+            videoBackground.uploadLatestFrame();
+            if (videoBackground.isReady()) {
+                if (backgroundRenderTarget != null) {
+                    backgroundRenderTarget.close();
+                    backgroundRenderTarget = null;
+                }
+                LuminRenderSystem.setActiveTarget(null);
+                int screenWidth = window.getGuiScaledWidth();
+                int screenHeight = window.getGuiScaledHeight();
+                float videoAspect = (float) videoBackground.width() / videoBackground.height();
+                float screenAspect = (float) screenWidth / screenHeight;
+                float u0 = 0.0F;
+                float u1 = 1.0F;
+                float v0 = 0.0F;
+                float v1 = 1.0F;
+                if (screenAspect > videoAspect) {
+                    float visibleHeight = videoAspect / screenAspect;
+                    v0 = (1.0F - visibleHeight) * 0.5F;
+                    v1 = 1.0F - v0;
+                } else if (screenAspect < videoAspect) {
+                    float visibleWidth = screenAspect / videoAspect;
+                    u0 = (1.0F - visibleWidth) * 0.5F;
+                    u1 = 1.0F - u0;
+                }
+                graphics.blit(videoBackground.textureId(), 0, 0, screenWidth, screenHeight, u0, u1, v0, v1);
+                return;
+            }
+            if (backgroundRenderTarget == null) {
+                backgroundRenderTarget = LuminRenderSystem.LuminRenderTarget.create("main-menu-background", window.getWidth(), window.getHeight());
+            }
+            backgroundRenderTarget.clear();
+            backgroundRenderTarget.resize(window.getWidth(), window.getHeight());
+            LuminRenderSystem.setActiveTarget(backgroundRenderTarget);
+            GlslSandBox.INSTANCE.render(GlslSandBox.PLANET,
+                    LuminRenderSystem.toGravenMouseX(mouseX), LuminRenderSystem.toGravenMouseY(mouseY));
+        } else {
+            if (videoBackground != null) {
+                videoBackground.close();
+                videoBackground = null;
+            }
+            if (backgroundRenderTarget == null) {
+                backgroundRenderTarget = LuminRenderSystem.LuminRenderTarget.create("main-menu-background", window.getWidth(), window.getHeight());
+            }
+            backgroundRenderTarget.clear();
+            backgroundRenderTarget.resize(window.getWidth(), window.getHeight());
+            LuminRenderSystem.setActiveTarget(backgroundRenderTarget);
+            GlslSandBox.INSTANCE.render(background, LuminRenderSystem.toGravenMouseX(mouseX), LuminRenderSystem.toGravenMouseY(mouseY));
+        }
 
         LuminRenderSystem.setActiveTarget(null);
         graphics.blit(backgroundRenderTarget.getIdentifier(), 0, 0, window.getGuiScaledWidth(), window.getGuiScaledHeight(), 0, 1, 1, 0);
@@ -290,6 +334,10 @@ public class MainMenuScreen extends Screen {
             backgroundRenderTarget.close();
             backgroundRenderTarget = null;
         }
+        if (videoBackground != null) {
+            videoBackground.close();
+            videoBackground = null;
+        }
     }
 
     @Override
@@ -333,7 +381,8 @@ public class MainMenuScreen extends Screen {
         SEA_LEVEL,
         PLANET,
         BLACK_HOLE,
-        MINECRAFT
+        MINECRAFT,
+        NEW
     }
 
 }

@@ -92,6 +92,28 @@ public final class GravenTranslations {
             Gui.LIST_ALL,
             Gui.LIST_AVAILABLE,
             Gui.LIST_SELECTED_HEADER,
+            Music.TITLE,
+            Music.SEARCH_PLACEHOLDER,
+            Music.SEARCH_ACTION,
+            Music.NOTHING_PLAYING,
+            Music.PLAY,
+            Music.PAUSE,
+            Music.CLOSE,
+            Music.LOADING,
+            Music.PLAYING,
+            Music.PAUSED,
+            Music.SEARCH_HINT,
+            Music.RESULTS,
+            Music.PLAYLIST_ID,
+            Music.IMPORT_PLAYLIST,
+            Music.PREVIOUS,
+            Music.NEXT,
+            Music.LIST_LOOP,
+            Music.SINGLE_LOOP,
+            Music.SHUFFLE,
+            Music.LYRICS,
+            Music.NO_LYRICS,
+            Music.SEEKING,
             Clip.WHOOSH,
             Freeze.DISABLED_ON_FLAG,
             ElytraFly.PITCH40_TAKEOFF_COMPLETE,
@@ -233,6 +255,34 @@ public final class GravenTranslations {
         public static final TranslateComponent WHOOSH = create("modules.clip", "whoosh");
 
         private Clip() {
+        }
+    }
+
+    public static final class Music {
+        public static final TranslateComponent TITLE = create("gui.music", "title");
+        public static final TranslateComponent SEARCH_PLACEHOLDER = create("gui.music", "search_placeholder");
+        public static final TranslateComponent SEARCH_ACTION = create("gui.music", "search_action");
+        public static final TranslateComponent NOTHING_PLAYING = create("gui.music", "nothing_playing");
+        public static final TranslateComponent PLAY = create("gui.music", "play");
+        public static final TranslateComponent PAUSE = create("gui.music", "pause");
+        public static final TranslateComponent CLOSE = create("gui.music", "close");
+        public static final TranslateComponent LOADING = create("gui.music", "loading");
+        public static final TranslateComponent PLAYING = create("gui.music", "playing");
+        public static final TranslateComponent PAUSED = create("gui.music", "paused");
+        public static final TranslateComponent SEARCH_HINT = create("gui.music", "search_hint");
+        public static final TranslateComponent RESULTS = create("gui.music", "results");
+        public static final TranslateComponent PLAYLIST_ID = create("gui.music", "playlist_id");
+        public static final TranslateComponent IMPORT_PLAYLIST = create("gui.music", "import_playlist");
+        public static final TranslateComponent PREVIOUS = create("gui.music", "previous");
+        public static final TranslateComponent NEXT = create("gui.music", "next");
+        public static final TranslateComponent LIST_LOOP = create("gui.music", "list_loop");
+        public static final TranslateComponent SINGLE_LOOP = create("gui.music", "single_loop");
+        public static final TranslateComponent SHUFFLE = create("gui.music", "shuffle");
+        public static final TranslateComponent LYRICS = create("gui.music", "lyrics");
+        public static final TranslateComponent NO_LYRICS = create("gui.music", "no_lyrics");
+        public static final TranslateComponent SEEKING = create("gui.music", "seeking");
+
+        private Music() {
         }
     }
 

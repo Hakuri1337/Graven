@@ -33,6 +33,30 @@
         "options": "选项",
         "quit": "退出游戏"
       },
+      "music": {
+        "title": "音乐播放器",
+        "search_placeholder": "搜索歌曲",
+        "search_action": "搜索",
+        "nothing_playing": "未播放歌曲",
+        "play": "播放",
+        "pause": "暂停",
+        "close": "关闭",
+        "loading": "正在加载...",
+        "playing": "正在播放",
+        "paused": "已暂停",
+        "search_hint": "输入歌曲名后按回车搜索",
+        "results": "项结果",
+        "playlist_id": "歌单 ID",
+        "import_playlist": "导入歌单",
+        "previous": "上一首",
+        "next": "下一首",
+        "list_loop": "列表循环",
+        "single_loop": "单曲循环",
+        "shuffle": "随机播放",
+        "lyrics": "歌词",
+        "no_lyrics": "暂无歌词",
+        "seeking": "正在调整进度..."
+      },
       "tab": {
         "general": "常规",
         "friend": "好友",
@@ -313,7 +337,8 @@
           "sea_level": "海平面",
           "planet": "行星",
           "black_hole": "黑洞",
-          "minecraft": "Minecraft"
+          "minecraft": "Minecraft",
+          "new": "New"
         },
         "show welcome screen": "启动时显示欢迎页",
         "enable lua scripts": "启用 Lua 脚本",
@@ -362,23 +387,6 @@
         "fake staff detected": "检测到疑似 Staff！（{name}）",
         "debug marker 11": "汤圆来了11",
         "debug marker 1": "汤圆来了1"
-      },
-      "anti kb": {
-        "_value": "反击退",
-        "mode": {
-          "_value": "模式",
-          "noxz": "NoXZ",
-          "jumpreset": "跳跃重置",
-          "mix": "混合"
-        },
-        "rotate": "旋转",
-        "follow direction": "跟随方向",
-        "try attack": "尝试攻击",
-        "movement override": "移动覆盖",
-        "rotate ticks": "旋转 Tick",
-        "attack amount": "攻击次数",
-        "instant attack": "即时攻击",
-        "sprint state check": "检查冲刺状态"
       },
       "autothrow": {
         "_value": "自动投掷",
@@ -741,10 +749,12 @@
           "multiple": "多个"
         },
         "aim range": "瞄准范围",
+        "range": "攻击范围",
         "fov": "视野角度",
         "rotation speed": "旋转速度",
         "min cps": "最小CPS",
         "max cps": "最大CPS",
+        "heypixel keepsprint": "Heypixel 保持疾跑",
         "player": "玩家",
         "mob": "怪物",
         "animal": "动物",
@@ -1141,6 +1151,18 @@
           "xin_2b2t": "2b2t.xin"
         }
       },
+      "auto run away": {
+        "_value": "自动逃跑",
+        "health": "触发血量",
+        "command": {
+          "_value": "命令",
+          "hub": "/hub",
+          "again": "/again"
+        }
+      },
+      "music player": {
+        "_value": "音乐播放器"
+      },
       "follower": {
         "_value": "自动追人",
         "mode": {
@@ -1455,8 +1477,18 @@
         "mode": {
           "_value": "模式",
           "cancel": "取消",
-          "legit": "合法"
+          "legit": "合法",
+          "grim": "Grim"
         },
+        "grim mode": {
+          "_value": "Grim 模式",
+          "pertick": "每 Tick",
+          "onetime": "单次"
+        },
+        "attacks": "攻击次数",
+        "jump reset": "跳跃重置",
+        "jump tick": "跳跃 Tick",
+        "logging": "日志",
         "server motion": "服务端移动",
         "explosion": "爆炸",
         "explosion only block": "仅方块内无爆炸",
@@ -1926,7 +1958,69 @@
         "quartz": "石英",
         "water": "水",
         "lava": "岩浆"
-      }
+      },
+      "targetstrafe": {
+        "_value": "目标环绕",
+        "mode": { "_value": "模式", "adaptive": "自适应", "behind": "背后" },
+        "distance": "距离", "points": "路径点数", "require space key": "需要按住空格", "auto 3rd person": "自动第三人称"
+      },
+      "tpaura": {
+        "_value": "传送光环",
+        "mode": { "_value": "模式", "cubecraft": "CubeCraft", "vanilla": "原版", "paper": "Paper" },
+        "priority": { "_value": "优先级", "distance": "距离", "health": "生命值", "livingtime": "存活时间", "armor": "护甲" },
+        "range": "范围", "step size": "步长", "packets/tick": "每刻发包数", "vclip": "垂直穿越", "prev": "位置预测",
+        "prewarm packets": "预热包", "prewarm count": "预热包数量", "random offset": "随机偏移",
+        "offset xz": "水平偏移", "offset y": "垂直偏移", "safe target fallback": "安全目标回退",
+        "rotate": "旋转", "swing": "挥手", "fake autoblock": "假格挡", "use mace": "使用重锤",
+        "use cooldown": "使用攻击冷却", "cooldown base": "冷却阈值", "attack delay": "攻击延迟",
+        "attack times": "攻击次数", "pre-attack delay": "攻击前延迟", "return delay ticks": "返回延迟刻数",
+        "try miss totem": "尝试错过图腾", "cancel ping packets": "取消延迟包", "disable on lagback": "回弹时禁用",
+        "render pos scale": "位置渲染缩放",
+        "highlight target": { "_value": "高亮目标", "off": "关闭", "twod": "2D", "glow": "发光" },
+        "render pos": "渲染位置", "render pos color": "位置颜色", "render trail": "渲染轨迹", "render trail color": "轨迹颜色"
+      },
+      "tpauraplus": {
+        "_value": "传送光环增强版",
+        "priority": { "_value": "优先级", "distance": "距离", "health": "生命值", "livingtime": "存活时间", "armor": "护甲" },
+        "range": "范围", "step size": "步长", "packets/tick": "每刻发包数", "vclip": "垂直穿越", "prev": "位置预测",
+        "safe target fallback": "安全目标回退", "random offset": "随机偏移", "offset xz": "水平偏移", "offset y": "垂直偏移",
+        "rotate": "旋转", "swing": "挥手", "use mace": "使用重锤", "use cooldown": "使用攻击冷却",
+        "cooldown base": "冷却阈值", "attack delay": "攻击延迟", "attack times": "攻击次数",
+        "pre-attack delay": "攻击前延迟", "return delay ticks": "返回延迟刻数", "try miss totem": "尝试错过图腾",
+        "disable on lagback": "回弹时禁用", "anti teleport": "反传送修正", "render trail": "渲染轨迹", "render trail color": "轨迹颜色"
+      },
+      "tpaurarise": {
+        "_value": "Rise 传送光环",
+        "mode": { "_value": "模式", "teleportaura": "传送光环", "watchdog": "Watchdog" },
+        "targets": { "_value": "目标模式", "single": "单目标", "multiple": "多目标" },
+        "range": "范围", "min cps": "最低 CPS", "max cps": "最高 CPS", "1.9 cooldown": "1.9 攻击冷却",
+        "step size": "步长", "packets/tick": "每刻发包数", "render path": "渲染路径",
+        "players": "玩家", "hostile": "敌对生物", "invisibles": "隐身目标", "teammates": "队友"
+      },
+      "antivoid": {
+        "_value": "虚空保护",
+        "mode": { "_value": "模式", "blink": "延迟发包", "flag": "回弹", "ghostblock": "幽灵方块" },
+        "void level": "虚空高度", "fall distance": "触发坠落距离", "flag height": "回弹高度", "silent": "静默"
+      },
+      "autogapple": { "_value": "自动金苹果", "health": "生命值" },
+      "clicktp": { "_value": "点击传送", "max distance": "最大距离", "step distance": "单步距离", "render box": "渲染方框" },
+      "cubecraftdisbaler": {
+        "_value": "CubeCraft 禁用器", "hold time": "保持时间", "force ground": "强制落地",
+        "cancel bad packets": "取消异常包", "transaction spoof": "事务欺骗", "verbose": "详细日志"
+      },
+      "derp": { "_value": "乱转", "spin speed": "旋转速度", "pitch": "俯仰角", "priority": "优先执行" },
+      "regen": {
+        "_value": "快速回血", "health": "生命值", "packets/tick": "每刻发包数",
+        "regen mode": { "_value": "回血模式", "normal": "普通", "anticheat": "反作弊" },
+        "min packets": "最少包数", "max packets": "最多包数", "delay min": "最小延迟", "delay max": "最大延迟",
+        "randomize packets": "随机包数", "randomize position": "随机位置", "position offset": "位置偏移",
+        "simulate reaction": "模拟反应", "reaction delay": "反应延迟", "simulate key jitter": "模拟按键抖动", "pause chance": "暂停概率"
+      },
+      "targets": {
+        "_value": "目标过滤", "player": "玩家", "dead": "死亡目标", "villager": "村民",
+        "invisible": "隐身目标", "mob": "怪物", "animal": "动物"
+      },
+      "itemphysics": { "_value": "物品物理" }
     },
     "elements": {
       "dynamic island": {

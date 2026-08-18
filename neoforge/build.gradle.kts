@@ -43,6 +43,14 @@ dependencies {
     jarJar(libs.luaj.jse) {
         version { strictly("[${libs.versions.luaj.get()}]") }
     }
+    implementation(libs.jcodec)
+    jarJar(libs.jcodec) {
+        version { strictly("[${libs.versions.jcodec.get()}]") }
+    }
+    implementation(libs.jcodec.javase)
+    jarJar(libs.jcodec.javase) {
+        version { strictly("[${libs.versions.jcodec.get()}]") }
+    }
     sodiumNeoForgeOuterJar(libs.sodium.neoforge)
     compileOnly(extractedSodiumNeoForgeModJar)
 }

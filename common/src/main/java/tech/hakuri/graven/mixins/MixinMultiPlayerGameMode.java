@@ -6,7 +6,7 @@ import tech.hakuri.graven.events.impl.DestroyBlockEvent;
 import tech.hakuri.graven.events.impl.StartDestroyBlockEvent;
 import tech.hakuri.graven.events.impl.UseItemEvent;
 import tech.hakuri.graven.modules.impl.player.BreakCooldown;
-import tech.hakuri.graven.utils.combat.FightManager;
+import tech.hakuri.graven.utils.asaka.grimvelocity.FightManager;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;

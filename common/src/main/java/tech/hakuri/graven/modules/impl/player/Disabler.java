@@ -4,16 +4,20 @@ import tech.hakuri.graven.events.bus.EventHandler;
 import tech.hakuri.graven.events.impl.GameJoinedEvent;
 import tech.hakuri.graven.events.impl.GameLeftEvent;
 import tech.hakuri.graven.events.impl.PacketEvent;
+import tech.hakuri.graven.events.impl.SendPositionEvent;
 import tech.hakuri.graven.modules.Category;
 import tech.hakuri.graven.modules.Module;
 import tech.hakuri.graven.settings.impl.BoolSetting;
+import tech.hakuri.graven.settings.impl.EnumSetting;
 import tech.hakuri.graven.utils.network.PacketUtils;
 import tech.hakuri.graven.utils.player.ChatUtils;
 import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.ServerboundKeepAlivePacket;
 import net.minecraft.network.protocol.common.ServerboundPongPacket;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
@@ -24,23 +28,41 @@ import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.world.entity.player.Input;
 
 import java.util.Random;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Disabler extends Module {
 
     public static final Disabler INSTANCE = new Disabler();
 
-    private final BoolSetting badPacketsA = boolSetting("Grim Bad PacketsA", true);
-    private final BoolSetting grimDuplicateRotPlace = boolSetting("Grim Duplicate RotPlace", true);
-    private final BoolSetting acaFastSwitch = boolSetting("ACA Fast Switch", true);
-    private final BoolSetting acaInventoryFrequency = boolSetting("ACA Inventory Frequency", false);
-    private final BoolSetting acaAimStep = boolSetting("ACA Aim Step", true);
-    private final BoolSetting acaPerfectRotation = boolSetting("ACA Perfect Rotation", true);
-    private final BoolSetting themisBlink = boolSetting("Themis Blink", true);
-    private final BoolSetting onlyRemoteServer = boolSetting("Only Remote Server", false);
-    private final BoolSetting logging = boolSetting("Logging", false);
+    private enum Mode {
+        Heypixel,
+        CubeCraft
+    }
 
-    private final BoolSetting sprinting = boolSetting("Sprinting", true);
-    private final BoolSetting input = boolSetting("Input", true);
+    private final EnumSetting<Mode> mode = enumSetting("Mode", Mode.Heypixel, this::onModeChanged);
+
+    // 原有设置全部归属于 Heypixel 模式，保留配置键和默认值以兼容旧配置。
+    private final BoolSetting badPacketsA = boolSetting("Grim Bad PacketsA", true, this::isHeypixelMode);
+    private final BoolSetting grimDuplicateRotPlace = boolSetting("Grim Duplicate RotPlace", true, this::isHeypixelMode);
+    private final BoolSetting acaFastSwitch = boolSetting("ACA Fast Switch", true, this::isHeypixelMode);
+    private final BoolSetting acaInventoryFrequency = boolSetting("ACA Inventory Frequency", false, this::isHeypixelMode);
+    private final BoolSetting acaAimStep = boolSetting("ACA Aim Step", true, this::isHeypixelMode);
+    private final BoolSetting acaPerfectRotation = boolSetting("ACA Perfect Rotation", true, this::isHeypixelMode);
+    private final BoolSetting themisBlink = boolSetting("Themis Blink", true, this::isHeypixelMode);
+    private final BoolSetting onlyRemoteServer = boolSetting("Only Remote Server", false, this::isHeypixelMode);
+    private final BoolSetting logging = boolSetting("Logging", false, this::isHeypixelMode);
+
+    private final BoolSetting sprinting = boolSetting("Sprinting", true, this::isHeypixelMode);
+    private final BoolSetting input = boolSetting("Input", true, this::isHeypixelMode);
+
+    private static final long CUBECRAFT_WAIT_DURATION_MS = 5_000L;
+    private static final long CUBECRAFT_PACKET_DELAY_MS = 2_000L;
+    private final Queue<CubePacketEntry> cubePacketQueue = new ConcurrentLinkedQueue<>();
+    private boolean cubeLag;
+    private long cubeWaitStartedAt;
+    private boolean cubeWaiting;
+    private long cubeDisabledSince;
 
     private final Random random = new Random();
     private int lastSentSlot = -1;
@@ -71,11 +93,13 @@ public class Disabler extends Module {
     private Disabler() {
         super("Disabler", Category.PLAYER);
         resetState();
+        resetCubeCraftState();
     }
 
     @Override
     protected void onEnable() {
         resetState();
+        resetCubeCraftState();
     }
 
     @Override
@@ -83,12 +107,18 @@ public class Disabler extends Module {
         if (shouldRestore && mc.player != null) {
             restoreInput();
         }
+        flushCubeCraftPackets();
         resetState();
+        resetCubeCraftState();
     }
 
     @EventHandler
     private void onGameJoined(GameJoinedEvent event) {
+        if (shouldRestore && mc.player != null) {
+            restoreInput();
+        }
         resetState();
+        resetCubeCraftState();
     }
 
     @EventHandler
@@ -97,11 +127,38 @@ public class Disabler extends Module {
             restoreInput();
         }
         resetState();
+        resetCubeCraftState();
+    }
+
+    @EventHandler
+    private void onSendPosition(SendPositionEvent event) {
+        if (!mode.is(Mode.CubeCraft) || mc.player == null) {
+            return;
+        }
+
+        boolean waiting = isCubeCraftWaiting();
+        if (cubeWaiting && !waiting) {
+            cubeDisabledSince = System.currentTimeMillis();
+        }
+        cubeWaiting = waiting;
+
+        CubePacketEntry entry;
+        while ((entry = cubePacketQueue.peek()) != null) {
+            if (System.currentTimeMillis() - entry.queuedAt() < CUBECRAFT_PACKET_DELAY_MS) {
+                break;
+            }
+            cubePacketQueue.poll();
+            PacketUtils.sendSilently(entry.packet());
+        }
     }
 
     @EventHandler
     private void onPacketReceive(PacketEvent.Receive event) {
         Packet<?> packet = event.getPacket();
+        if (mode.is(Mode.CubeCraft)) {
+            handleCubeCraftReceive(packet);
+            return;
+        }
         if (packet instanceof ClientboundLoginPacket) {
             resetState();
             return;
@@ -121,6 +178,10 @@ public class Disabler extends Module {
 
     @EventHandler
     private void onPacketSend(PacketEvent.Send event) {
+        if (mode.is(Mode.CubeCraft)) {
+            handleCubeCraftSend(event);
+            return;
+        }
         if (!isActiveContext()) {
             resetState();
             return;
@@ -170,6 +231,86 @@ public class Disabler extends Module {
                 restoreInput();
             }
         }
+    }
+
+    private void handleCubeCraftReceive(Packet<?> packet) {
+        if (mc.player == null) {
+            return;
+        }
+        if (packet instanceof ClientboundPlayerPositionPacket) {
+            cubeWaitStartedAt = System.currentTimeMillis();
+            cubeLag = true;
+            flushCubeCraftPackets();
+            ChatUtils.addChatMessage("Lag detected!");
+        }
+    }
+
+    private void handleCubeCraftSend(PacketEvent.Send event) {
+        if (mc.player == null || isCubeCraftWaiting()) {
+            return;
+        }
+
+        Packet<?> packet = event.getPacket();
+        if (packet instanceof ServerboundPlayerCommandPacket command
+                && command.getAction() == ServerboundPlayerCommandPacket.Action.START_SPRINTING) {
+            event.cancel();
+            return;
+        }
+        if (packet instanceof ServerboundKeepAlivePacket || packet instanceof ServerboundPongPacket) {
+            cubePacketQueue.add(new CubePacketEntry(packet, System.currentTimeMillis()));
+            event.cancel();
+        }
+    }
+
+    private boolean isHeypixelMode() {
+        return mode.is(Mode.Heypixel);
+    }
+
+    private void onModeChanged(Mode ignored) {
+        if (!isEnabled()) {
+            return;
+        }
+        if (shouldRestore && mc.player != null) {
+            restoreInput();
+        }
+        flushCubeCraftPackets();
+        resetState();
+        resetCubeCraftState();
+    }
+
+    private boolean isCubeCraftWaiting() {
+        return mc.player != null && cubeLag && cubeWaitStartedAt > 0L
+                && System.currentTimeMillis() - cubeWaitStartedAt < CUBECRAFT_WAIT_DURATION_MS;
+    }
+
+    private void flushCubeCraftPackets() {
+        CubePacketEntry entry;
+        while ((entry = cubePacketQueue.poll()) != null) {
+            PacketUtils.sendSilently(entry.packet());
+        }
+    }
+
+    private void resetCubeCraftState() {
+        cubePacketQueue.clear();
+        cubeLag = false;
+        cubeWaitStartedAt = 0L;
+        cubeWaiting = false;
+        cubeDisabledSince = System.currentTimeMillis();
+    }
+
+    public double getCubeCraftDisabledDuration() {
+        if (isCubeCraftWaiting()) {
+            return 0.0D;
+        }
+        return (System.currentTimeMillis() - cubeDisabledSince) / 1_000.0D;
+    }
+
+    public int getCubeCraftQueuedPacketCount() {
+        return cubePacketQueue.size();
+    }
+
+    public String getInfo() {
+        return mode.is(Mode.CubeCraft) ? (isCubeCraftWaiting() ? "Waiting" : "Sentinel") : mode.getValue().toString();
     }
 
     private boolean isActiveContext() {
@@ -404,5 +545,8 @@ public class Disabler extends Module {
         if (logging.getValue()) {
             ChatUtils.addChatMessage(false, "[Disabler] " + message);
         }
+    }
+
+    private record CubePacketEntry(Packet<?> packet, long queuedAt) {
     }
 }

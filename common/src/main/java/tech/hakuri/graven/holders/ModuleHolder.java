@@ -78,7 +78,11 @@ public class ModuleHolder {
         addModule(SpearKill.INSTANCE);
         addModule(Teams.INSTANCE);
         addModule(TriggerBot.INSTANCE);
-        addModule(AntiKB.INSTANCE);
+        addModule(Velocity.INSTANCE);
+        addModule(TargetStrafe.INSTANCE);
+        addModule(TpauraRise.INSTANCE);
+        addModule(TpAura.INSTANCE);
+        addModule(TpAuraPlus.INSTANCE);
 
         // Player
         addModule(AutoArmor.INSTANCE);
@@ -102,7 +106,14 @@ public class ModuleHolder {
         addModule(Timer.INSTANCE);
         addModule(UseCooldown.INSTANCE);
         addModule(AutoQueue.INSTANCE);
+        addModule(AutoRunAway.INSTANCE);
+        addModule(AutoGapple.INSTANCE);
+        addModule(ClickTP.INSTANCE);
+        addModule(Derp.INSTANCE);
+        addModule(Regen.INSTANCE);
         addModule(AntiStaff.INSTANCE);
+        addModule(MusicPlayer.INSTANCE);
+        addModule(Targets.INSTANCE);
 
         // Movement
         addModule(ElytraFly.INSTANCE);
@@ -130,7 +141,7 @@ public class ModuleHolder {
         addModule(Step.INSTANCE);
         addModule(Strafe.INSTANCE);
         addModule(Stuck.INSTANCE);
-        addModule(Velocity.INSTANCE);
+        addModule(AntiVoid.INSTANCE);
 
         // Render
         addModule(AntiAlias.INSTANCE);
@@ -158,6 +169,7 @@ public class ModuleHolder {
         addModule(Shaders.INSTANCE);
         addModule(SneakTweak.INSTANCE);
         addModule(StreamerMode.INSTANCE);
+        addModule(ItemPhysics.INSTANCE);
         addModule(Xray.INSTANCE);
 
     }

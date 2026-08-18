@@ -42,6 +42,7 @@ public class graven {
         // 添加一个退出游戏时候的钩子
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             ConfigHolder.INSTANCE.saveNow();
+            if (Managers.MUSIC != null) Managers.MUSIC.close();
             LuaScriptManager.INSTANCE.close();
             Constants.LOGGER.info(Constants.NAME + " saved config on shutdown.");
         }));

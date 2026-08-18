@@ -1,132 +1,97 @@
-# Asaka Velocity Grim 完整迁移
+# Asaka GrimVelocity 完整重迁移
 
-## 状态
+## 状态与基准
 
-本迁移已经重新启用。生产实现位于
-`common/src/main/java/tech/hakuri/graven/modules/impl/movement/Velocity.java`，参考实现位于
-`SkidProjects/Asaka-26.2x/common/src/main/java/asaka/lol/client/modules/impl/combat/Velocity.java`。
+本次迁移以
+`SkidProjects/Asaka-26.2x/common/src/main/java/asaka/lol/client/modules/impl/combat/Velocity.java`
+为唯一行为基准。目标环境为 Minecraft 26.1.2、Java 25；参考环境为 Minecraft 26.2。
 
-迁移目标是保留 Asaka 的包选择、状态转换、攻击计数、包顺序和错误恢复，同时补齐其依赖的攻击减速与逻辑射线语义。此前 Graven 增加的目标锁定和“仅实际攻击后递减计数”并非参考行为，本次没有继续保留。
+权威源文件 SHA-256 为
+`29283A2DAE8238321D84D740AF79A9832D57F42F92527F7FEB22329D9D268E4D`。
+运行 Jar 中同名混淆类及用户目录下其他版本配置不参与本次迁移定义，避免把不同分支的
+Alink/Prediction 状态机混入这份源码的 GrimReduce 实现。
 
-## 版本与边界
+仓库提供 `scripts/verify_asaka_velocity_port.ps1`。该脚本会将权威源码执行确定性的根包替换，
+并对 `Velocity` 及五个重新实现的专用依赖逐字比较；任何控制流、默认值、异常处理、注释或
+调用顺序漂移都会返回非零状态。
 
-| 项目 | 版本 | 用途 |
-|---|---:|---|
-| Asaka | Minecraft 26.2 | 唯一行为参考 |
-| Graven | Minecraft 26.1.2 / NeoForm 26.1.2-1 | 目标运行环境 |
-| Java | 25 | 两侧共同运行版本 |
-
-当前实现只使用 Minecraft、Java 标准库和 Graven 本地 API，不新增 Maven、Fabric 或 NeoForge 依赖。共享实现继续位于 `common/`。
+当前 `Velocity` 已恢复 Asaka 的 `Cancel`、`Legit`、`Grim` 三种模式。Grim 的字段、设置、包选择、状态转换、攻击计数、回放时机、异常处理和清理策略均按参考源码保留。
 
 ## 依赖映射
 
-| Asaka 对象 | Graven 对应项 | 迁移结果 |
+| Asaka 源对象 | Graven 迁移对象 | 处理 |
 |---|---|---|
-| `Velocity.Mode.Grim` | 现有 `Velocity.Mode` | 恢复 `Grim`，保留 `Cancel`、`Legit` 和默认值 |
-| `GrimMode.PerTick/OneTime` | `EnumSetting<GrimMode>` | 名称、默认值和分支顺序一致 |
-| 五个 Grim Setting | Graven Setting DSL | 名称、范围、步长和显示条件一致 |
-| `grimPacketQueue` | `ConcurrentLinkedQueue<Packet<?>>` | 保留入站击退/Ping FIFO 回放 |
-| `FightManager` | `tech.hakuri.graven.utils.combat.FightManager` | 已存在；攻击槽、纯发包攻击和普通攻击标记一致 |
-| `MixinMultiPlayerGameMode` | Graven 同名 Mixin | 已存在；未取消攻击时调用 `markVanillaAttack()` |
-| `KeepSprint.Mode` | Graven `KeepSprint` | 恢复 `Vanilla/Prediction` 和模式信息显示 |
-| `AttackSlowDownEvent` | Graven 同名事件与 `MixinPlayer` | 恢复 Asaka 对原版攻击减速的取消/预测处理 |
-| 攻击前热栏切换 | `PacketUtils.sendSilently` | 恢复随机临时槽位和原槽位两次切换 |
-| Asaka `mc.pick()` 后的 `mc.hitResult` | `Managers.ROTATION.getHitResult()` | 适配 Graven 独立逻辑射线架构，保持服务端旋转目标语义 |
-| 入站包事件 | `PacketEvent.Receive` | Velocity 以普通优先级先取消包，统一 PacketQueueManager 在 `-1000` 不会重复收包 |
-| 包回放 | `Packet.handle(ClientPacketListener)` | 绕过 PacketEvent 再入，保持参考 FIFO 和处理顺序 |
-| `ChatUtils`/`TimerUtils`/排除工具 | Graven 同名实现 | 直接复用 |
+| `modules.impl.combat.Velocity` | `modules.impl.combat.Velocity` | 保留 Combat 模块边界；Grim 主体逐分支迁移 |
+| `utils.combat.FightManager` | `utils.asaka.grimvelocity.FightManager` | 新增完整专用副本，不复用结构不同的通用类 |
+| `utils.player.ChatUtils` | `utils.asaka.grimvelocity.ChatUtils` | 新增完整专用副本；仅适配 26.1.2 GUI getter 和 Graven Accessor 名称 |
+| `TimerUtils` | `utils.asaka.grimvelocity.TimerUtils` | 新增完整专用副本，仅替换根包名 |
+| `PlayerUtils` | `utils.asaka.grimvelocity.PlayerUtils` | 新增完整专用副本，仅替换根包名和 `Constants` 引用 |
+| `EnchantmentUtils` | `utils.asaka.grimvelocity.EnchantmentUtils` | 新增完整专用副本，仅替换根包名 |
+| `PacketEvent`、`PlayerTickEvent`、`KeyboardInputEvent`、`GameLeftEvent` | Graven 同名事件 | 类型、取消模型和分发时机相同 |
+| `Module`、Setting DSL、EventBus | Graven 同名基础设施 | Velocity 使用到的接口和优先级排序相同 |
+| `MixinConnection` | Graven 同名 Mixin | 收发事件触发点和取消/替换路径相同 |
+| `MixinMultiPlayerGameMode` | Graven 同名 Mixin | 普通攻击成功进入原版路径前标记专用 `FightManager` |
+| `MixinEntity`、`MixinFlowingFluid`、`MixinLocalPlayer` | Graven 同名 Mixin | 三个推力取消注入点及条件保持相同 |
+| Asaka 聊天前缀渲染链 | Graven `MixinChatComponent` | 在 Graven 前缀处理后继续执行专用 `ChatUtils.applyAnimatedPrefix()` |
+| `mc.hitResult` | `mc.hitResult` | 严格保留直接读取，不使用 `RotationManager.getHitResult()` |
+
+没有新增 Maven、Fabric 或 NeoForge 外部依赖。
 
 ## Grim 状态机
 
-### 首个本地击退
+### 收到本玩家速度包
 
-1. `grimLag` 为真时清除标记并放行当前击退。
-2. `grimAlink` 已启用时缓存并取消后续击退。
-3. 逻辑射线命中存活玩家时设置攻击计数并放行首个击退。
-4. 未命中玩家、玩家在空中且两格内没有其他存活玩家时，进入缓存状态并取消当前击退。
-5. 其他情况不修改击退。
+1. `grimLag == true` 时复位该标记、调用 `clearGrim()`，并放行当前速度包。
+2. `grimAlink == true` 时把当前速度包加入 FIFO 并取消原处理。
+3. 当前 `mc.hitResult` 命中任意 `Player` 时，将 `grimAttackQueue` 设为 `Attacks`，启用 `grimAlink`，放行首个速度包。
+4. 未命中玩家、当前不在地面且两格内没有其他存活玩家时，启用 `grimAlink`，随后缓存并取消当前速度包。
+5. 其他情况放行速度包且不进入 Grim 阶段。
 
-### 缓存与回放
+`grimAlink` 期间只缓存本玩家 `ClientboundSetEntityMotionPacket` 和 `ClientboundPingPacket`。其他实体的速度包会在实体 ID 检查处直接返回。
 
-`grimAlink` 期间缓存本地 `ClientboundSetEntityMotionPacket` 和 `ClientboundPingPacket`。Ping 的处理会产生 Pong，因此缓存 Ping 会让服务端的交易确认与延迟击退保持相同顺序。
+### 每 tick 攻击
 
-攻击计数耗尽后：
+- `Jump Reset` 原样比较 `mc.player.tickCount == Jump Tick`。它不是“受击后经过 N tick”的计时器。
+- `grimAttackQueue <= 0` 且 FIFO 非空时，空中继续等待；落地后同步回放全部包、重新装填攻击计数，并在当前事件中返回。
+- 攻击阶段每 tick 重新读取 `mc.hitResult`，不锁定首次目标。
+- 未命中存活玩家时不递减计数，持续等待目标。
+- `PerTick` 每 tick 尝试占用一次攻击槽；无论槽位是否已被普通攻击占用，计数都会递减。
+- `OneTime` 在同一 tick 循环消耗全部计数；`FightManager` 锁使循环中最多只有一次真实纯发包攻击。
+- 纯发包攻击顺序固定为 `ServerboundAttackPacket` 后 `ServerboundSwingPacket`。
+- 成功纯发包攻击后，本地水平速度乘以 `0.6`，垂直速度不变。
 
-- 队列为空时退出 `grimAlink`；
-- 队列非空且仍在空中时继续等待；
-- 落地后依次回放全部包，再建立一轮新的攻击计数。
+### 修正、禁用与离开世界
 
-收到 `ClientboundPlayerPositionPacket` 时先回放队列，再设置 `grimLag`。下一次本地击退按参考实现放行。
+- 收到 `ClientboundPlayerPositionPacket` 时先同步回放 FIFO，再设置 `grimLag = true`；位置修正包本身继续处理。
+- 模块禁用调用 `clearGrim()`：回放 FIFO、关闭 `grimAlink`，但不清零 `grimAttackQueue` 或 `grimLag`。
+- 模块重新启用调用 `resetGrim()`，此时才清空队列、计数和 `grimLag`。
+- `GameLeftEvent` 调用 `resetGrim()`，直接丢弃尚未回放的包。
+- 单个回放包抛出 `Exception` 时打印堆栈并继续回放后续包。
 
-### 攻击与速度
+## 26.1.2 机械适配
 
-`FightManager.attackByPacket()` 按以下顺序发送：
+参考 `ChatUtils` 使用 26.2 的 `mc.gui.hud.getChat()` 和 `asaka$...` Accessor。Graven 26.1.2 对应为 `mc.gui.getChat()` 和 `graven$...`。这两处仅是目标版本与 Mixin 前缀适配，消息构建、线程切换、哈希替换和动画前缀逻辑没有改写。
 
-1. `ServerboundAttackPacket`
-2. `ServerboundSwingPacket`
-
-纯发包攻击不会调用客户端 `Player.attack()`，因此 Velocity 在成功占用攻击槽后手动把本地水平速度乘以 `0.6`。普通攻击则由 `MixinMultiPlayerGameMode` 标记，Velocity 不重复应用减速。
-
-`PerTick` 每个客户端 Tick 最多尝试一次攻击。`OneTime` 保留参考实现的循环与攻击锁行为：首次成功攻击后锁定当前 Tick，但剩余计数仍在同一循环中消耗。
-
-## 旋转兼容
-
-Asaka 的 `RotationManager.smooth()` 总会调用 `mc.pick(1.0f)`，所以 Velocity 读取的 `mc.hitResult` 已包含托管旋转。Graven 为避免静默旋转污染可见准星，将结果保存为 `rotationHitResult`，并通过 `getHitResult()` 暴露。
-
-因此 Graven 的 Grim 分支必须读取 `Managers.ROTATION.getHitResult()`。这不是目标锁定或算法替换，而是两个旋转架构之间的等价 API 映射；直接读取 `mc.hitResult` 会把摄像机目标当成服务端旋转目标，可能触发 Hitbox。
-
-## KeepSprint 兼容
-
-Asaka Grim 的攻击槽逻辑默认假设普通攻击是否已经应用 `0.6` 由 KeepSprint 控制。为避免 Graven 原有简化 KeepSprint 改变 Simulation 输入，本次恢复：
-
-- `Vanilla`：取消 `causeExtraKnockback`，攻击前静默切换随机热栏槽并立即切回；
-- `Prediction`：不取消原版攻击减速，只在减速事件中恢复疾跑；
-- `slowdown`、`groundOnly`、`prediction`、`reachOnly` 的原有后处理公式与条件；
-- `PlayerTickEvent.Pre/Post` 的预测窗口。
-
-Graven 26.1.2 的 `Player.causeExtraKnockback` 方法签名与 Asaka 26.2 不同，Mixin 使用当前参考源码中的三个参数签名，事件语义保持一致。
-
-## 明确保留的参考行为
-
-以下行为虽然看起来可以改进，但属于 Asaka 当前源码，迁移中不得静默改变：
-
-- `Jump Reset` 使用 `player.tickCount == Jump Tick`；
-- `PerTick` 在攻击槽已占用时仍递减计数；
-- `OneTime` 在同一 Tick 消耗全部计数，但攻击锁只允许首次纯发包攻击；
-- 攻击阶段每 Tick重新读取逻辑射线目标，不锁定首次目标；
-- `clearGrim()` 回放队列但不清零攻击计数或 `grimLag`；
-- 两格检查把所有其他存活玩家视为敌人；
-- No Water/Entity/Block Push 的值在 Grim 模式仍由既有 Mixin 使用。
-
-若后续要修正这些行为，需要单独建立偏离 Asaka 的优化任务，并逐项记录兼容性影响。
-
-## 配置与 i18n
-
-- 模块 ID 仍为 `Velocity`，旧 Graven 配置中的 `Cancel/Legit` 可继续读取。
-- 历史配置中的 `Grim` 值恢复为可识别枚举。
-- KeepSprint 新增 `Mode` 时默认 `Vanilla`，已有减速和条件设置不改名。
-- `en_us.json` 与 `zh_cn.json` 包含模块、Setting 和枚举值的完整翻译。
+`ClientboundExplodePacket`、`ClientboundSetEntityMotionPacket`、`ClientboundPingPacket`、`ClientboundPlayerPositionPacket`、`ServerboundAttackPacket` 和 `ServerboundSwingPacket` 已直接核对 `reference/vanilla-26.1.2/`。
 
 ## 验证矩阵
 
-| 场景 | 预期结果 |
+| 场景 | 参考结果 |
 |---|---|
-| 首个击退且逻辑射线命中玩家 | 放行击退，建立攻击计数 |
-| 首个击退且空中无附近玩家 | 缓存并取消击退 |
-| `grimAlink` 中收到本地击退/Ping | FIFO 缓存并取消原处理 |
-| 攻击计数耗尽但未落地 | 不回放 |
-| 落地且队列非空 | 回放队列，下一 Tick 开始新攻击轮次 |
-| 收到位置修正 | 回放队列并令下一次击退跳过 Grim |
-| 同 Tick 已有普通攻击 | Velocity 不发送纯发包攻击 |
-| KeepSprint Vanilla | 取消原版攻击减速并执行双热栏切换 |
-| KeepSprint Prediction | 保留原版减速并恢复疾跑 |
-| Silent/Snap 托管旋转 | Grim 使用逻辑射线目标，而非可见准星目标 |
-| 模块禁用/离开世界 | 回放或清空缓存并复位状态 |
-| Fabric/NeoForge | 共享实现均能编译和打包 |
+| 首个速度包且准星命中玩家 | 放行包，装填攻击计数并进入 `grimAlink` |
+| 空中、无准星玩家且两格内无人 | 取消并缓存首个速度包 |
+| `grimAlink` 中收到 Ping | 取消并按 FIFO 缓存 |
+| 攻击计数为零且仍在空中 | 保留 FIFO，等待落地 |
+| 落地且 FIFO 非空 | 同步回放，重新装填计数，当前 tick 不攻击 |
+| 普通攻击先占用当前 tick | Grim 不发攻击，但 `PerTick` 仍消耗一次计数 |
+| `OneTime` 且 `Attacks > 1` | 只真实攻击一次，循环耗尽全部计数 |
+| 收到位置修正 | 回放 FIFO，下一次本玩家速度包仅清除 `grimLag` 并放行 |
+| 禁用 | 回放 FIFO，不主动清零攻击计数和 `grimLag` |
+| 离开世界 | 丢弃 FIFO 并清零全部 Grim 状态 |
 
 ## 兼容性报告
 
-- **保留：**Asaka 的包类型、FIFO 顺序、攻击/挥手顺序、状态字段、Setting、计数推进和 `0.6` 水平减速。
-- **更改：**目标读取改用 Graven 的逻辑射线 API；异常改用项目 Logger；离开世界额外复位 `FightManager`。这些变化分别用于架构等价、错误可诊断和跨世界清理。
-- **移除：**此前 Graven 的目标锁定、目标变化中止和“仅成功攻击后递减”优化。
+- **保留：**Asaka 的全部 Grim Setting、四个状态字段、FIFO 类型、包范围、条件顺序、直接准星读取、攻击锁、发包顺序、`0.6` 减速、位置修正处理和生命周期清理。
+- **更改：**仅根包名、Minecraft 26.1.2 聊天 GUI getter 和 Mixin Accessor 前缀。
+- **移除：**旧迁移的 `RotationManager.getHitResult()` 映射、目标锁定、命中变化中止、成功攻击后才递减等非 Asaka 行为。
 - **未实现：**无。

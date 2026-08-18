@@ -64,6 +64,8 @@ dependencies {
     compileOnly(libs.asm)
     compileOnly(libs.jsr305)
     implementation(libs.luaj.jse)
+    implementation(libs.jcodec)
+    implementation(libs.jcodec.javase)
 }
 
 configurations {

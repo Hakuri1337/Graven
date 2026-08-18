@@ -5,6 +5,7 @@ import tech.hakuri.graven.events.impl.AttackSlowDownEvent;
 import tech.hakuri.graven.events.impl.AttackYawEvent;
 import tech.hakuri.graven.events.impl.TravelEvent;
 import tech.hakuri.graven.modules.impl.movement.KeepSprint;
+import tech.hakuri.graven.modules.impl.combat.KillAura;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -45,6 +46,9 @@ public class MixinPlayer {
 
     @Inject(method = "attack", at = @At("RETURN"))
     private void onAfterAttack(Entity entity, CallbackInfo ci) {
+        if ((Player) (Object) this == mc.player && KillAura.INSTANCE.isHeypixelKeepSprintTransition()) {
+            return;
+        }
         KeepSprint keepSprint = KeepSprint.INSTANCE;
         if ((Player) (Object) this == mc.player && keepSprint.isEnabled() && keepSprint.shouldKeepSprint()) {
             // Re-enable sprint if vanilla attack stopped it
