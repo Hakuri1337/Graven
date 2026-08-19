@@ -18,6 +18,7 @@ import tech.hakuri.graven.utils.render.esp.DeobfESP;
 import tech.hakuri.graven.utils.render.esp.FireflyESP;
 import tech.hakuri.graven.utils.rotation.Priority;
 import tech.hakuri.graven.utils.rotation.RotationUtils;
+import tech.hakuri.graven.utils.timer.TimerUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.world.InteractionHand;
@@ -78,6 +79,7 @@ public class KillAura extends Module {
 
     private final IntSetting minCPS = intSetting("Min CPS", 10, 1, 20, 1, () -> mode.is(Mode.OnePointEight));
     private final IntSetting maxCPS = intSetting("Max CPS", 12, 1, 20, 1, () -> mode.is(Mode.OnePointEight));
+    private final BoolSetting keepSwing = boolSetting("Keep Swing", false, () -> mode.is(Mode.OnePointNinePlus));
 
     private final BoolSetting heypixelKeepSprint = boolSetting("Heypixel KeepSprint", false);
 
@@ -130,6 +132,7 @@ public class KillAura extends Module {
     private double attacks = 0.0;
     private boolean sprintCancelled;
     private int groundTicks;
+    private final TimerUtils attackTimer = new TimerUtils();
 
     private enum AttackAttempt {
         ATTACKED,
@@ -138,11 +141,18 @@ public class KillAura extends Module {
     }
 
     @Override
+    protected void onEnable() {
+        attackTimer.reset();
+    }
+
+    @Override
     protected void onDisable() {
         target = null;
         switchIndex = 0;
+        attacks = 0.0;
         sprintCancelled = false;
         groundTicks = 0;
+        attackTimer.reset();
         DeobfESP.retainRisingEffects();
     }
 
@@ -180,6 +190,7 @@ public class KillAura extends Module {
         if (targets.isEmpty()) {
             target = null;
             sprintCancelled = false;
+            attackTimer.reset();
             return;
         }
 
@@ -207,11 +218,23 @@ public class KillAura extends Module {
                     attacks -= 1.0;
                 }
             } else {
-                if (mc.player.getAttackStrengthScale(0.5f) >= 1.0f) {
-                    clickTargets(targets);
+                if (keepSwing.getValue()) {
+                    mc.player.swinging = true;
+                }
+
+                if (mc.player.getAttackStrengthScale(0.5f) >= 1.0f
+                        && attackTimer.passedMillise(700.0 / getCps())) {
+                    AttackAttempt attempt = clickTargets(targets);
+                    if (attempt == AttackAttempt.ATTACKED) {
+                        attackTimer.reset();
+                    }
                 }
             }
         }
+    }
+
+    private int getCps() {
+        return MathUtils.getRandom(minCPS.getValue(), maxCPS.getValue());
     }
 
     private AttackAttempt clickTargets(List<LivingEntity> targets) {

@@ -754,6 +754,7 @@
         "rotation speed": "Rotation Speed",
         "min cps": "Min CPS",
         "max cps": "Max CPS",
+        "keep swing": "Keep Swing",
         "heypixel keepsprint": "Heypixel KeepSprint",
         "player": "Player",
         "mob": "Mob",
