@@ -43,6 +43,7 @@ public class Velocity extends Module {
         Cancel,
         Legit,
         Grim,
+        CubeCraft,
     }
 
     private enum GrimMode {
@@ -58,6 +59,8 @@ public class Velocity extends Module {
     public final BoolSetting waterPush = boolSetting("No Water Push", true, () -> mode.is(Mode.Cancel));
     public final BoolSetting entityPush = boolSetting("No Entity Push", true, () -> mode.is(Mode.Cancel));
     public final BoolSetting blockPush = boolSetting("No Block Push", true, () -> mode.is(Mode.Cancel));
+    private final IntSetting cubeHorizontal = intSetting("Horizontal", 0, 0, 100, 1, () -> mode.is(Mode.CubeCraft));
+    private final IntSetting cubeVertical = intSetting("Vertical", 0, 0, 100, 1, () -> mode.is(Mode.CubeCraft));
 
     private final SettingGroup sgExclusions = settingGroup("Exclusions");
 
@@ -208,6 +211,24 @@ public class Velocity extends Module {
                     grimLog("Flag detected, clearing queue");
                     clearGrim();
                     grimLag = true;
+                }
+            }
+            case CubeCraft -> {
+                if (event.getPacket() instanceof ClientboundSetEntityMotionPacket packet
+                        && packet.id() == mc.player.getId()) {
+                    if (cubeHorizontal.getValue() == 0 && cubeVertical.getValue() == 0) {
+                        event.cancel();
+                    } else {
+                        Vec3 movement = packet.movement();
+                        event.setPacket(new ClientboundSetEntityMotionPacket(
+                                packet.id(),
+                                new Vec3(
+                                        movement.x * cubeHorizontal.getValue() / 100.0,
+                                        movement.y * cubeVertical.getValue() / 100.0,
+                                        movement.z * cubeHorizontal.getValue() / 100.0
+                                )
+                        ));
+                    }
                 }
             }
         }

@@ -740,7 +740,8 @@
         "mode": {
           "_value": "模式",
           "onepointeight": "1.8",
-          "onepointnineplus": "1.9+"
+          "onepointnineplus": "1.9+",
+          "cubecraftexclusive": "CubeCraft 专用"
         },
         "target mode": {
           "_value": "目标模式",
@@ -755,6 +756,38 @@
         "min cps": "最小CPS",
         "max cps": "最大CPS",
         "keep swing": "持续挥手",
+        "switch delay": "切换延迟",
+        "priority": {
+          "_value": "优先级",
+          "distance": "距离",
+          "health": "生命值",
+          "fov": "视野",
+          "livingtime": "存活时间",
+          "armor": "护甲"
+        },
+        "combat mode": {
+          "_value": "战斗模式",
+          "onepointeight": "1.8",
+          "onepointnineplus": "1.9+"
+        },
+        "cube range": "范围",
+        "block range": "格挡范围",
+        "wall range": "穿墙范围",
+        "rotation range": "旋转范围",
+        "autoblock mode": {
+          "_value": "自动格挡模式",
+          "none": "无",
+          "fake": "伪格挡",
+          "useitem": "使用物品",
+          "vanilla": "原版"
+        },
+        "movementfix mode": {
+          "_value": "移动修复模式",
+          "none": "无",
+          "silent": "静默",
+          "strict": "严格"
+        },
+        "ray cast": "射线检测",
         "heypixel keepsprint": "Heypixel 保持疾跑",
         "player": "玩家",
         "mob": "怪物",
@@ -1481,7 +1514,8 @@
           "_value": "模式",
           "cancel": "取消",
           "legit": "合法",
-          "grim": "Grim"
+          "grim": "Grim",
+          "cubecraft": "CubeCraft"
         },
         "grim mode": {
           "_value": "Grim 模式",
@@ -1492,6 +1526,8 @@
         "jump reset": "跳跃重置",
         "jump tick": "跳跃 Tick",
         "logging": "日志",
+        "horizontal": "水平",
+        "vertical": "垂直",
         "server motion": "服务端移动",
         "explosion": "爆炸",
         "explosion only block": "仅方块内无爆炸",

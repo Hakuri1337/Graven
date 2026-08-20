@@ -28,6 +28,7 @@ import net.minecraft.world.phys.HitResult;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class KillAura extends Module {
@@ -49,7 +50,8 @@ public class KillAura extends Module {
 
     private enum Mode {
         OnePointEight,
-        OnePointNinePlus
+        OnePointNinePlus,
+        CubeCraftExclusive
     }
 
     public enum TargetMode {
@@ -65,6 +67,11 @@ public class KillAura extends Module {
         Deobf
     }
 
+    private enum CubePriority { Distance, Health, Fov, LivingTime, Armor }
+    private enum CubeCombatMode { OnePointEight, OnePointNinePlus }
+    private enum CubeAutoBlockMode { None, Fake, UseItem, Vanilla }
+    private enum CubeMovementFixMode { None, Silent, Strict }
+
     private final EnumSetting<Mode> mode = enumSetting("Mode", Mode.OnePointEight);
 
     private final EnumSetting<TargetMode> targetMode = enumSetting("Target Mode", TargetMode.Single);
@@ -77,9 +84,24 @@ public class KillAura extends Module {
 
     private final IntSetting rotationSpeed = intSetting("Rotation Speed", 180, 10, 180, 10);
 
-    private final IntSetting minCPS = intSetting("Min CPS", 10, 1, 20, 1, () -> mode.is(Mode.OnePointEight));
-    private final IntSetting maxCPS = intSetting("Max CPS", 12, 1, 20, 1, () -> mode.is(Mode.OnePointEight));
-    private final BoolSetting keepSwing = boolSetting("Keep Swing", false, () -> mode.is(Mode.OnePointNinePlus));
+    private final IntSetting minCPS = intSetting("Min CPS", 10, 1, 20, 1,
+            () -> mode.is(Mode.OnePointEight) || isCubeCombat(CubeCombatMode.OnePointEight));
+    private final IntSetting maxCPS = intSetting("Max CPS", 12, 1, 20, 1,
+            () -> mode.is(Mode.OnePointEight) || isCubeCombat(CubeCombatMode.OnePointEight));
+    private final BoolSetting keepSwing = boolSetting("Keep Swing", false,
+            () -> mode.is(Mode.OnePointNinePlus) || isCubeCombat(CubeCombatMode.OnePointNinePlus));
+
+    private final DoubleSetting cubeSwitchDelay = doubleSetting("Switch Delay", 0.0, 0.0, 1000.0, 50.0,
+            () -> mode.is(Mode.CubeCraftExclusive) && targetMode.is(TargetMode.Switch));
+    private final EnumSetting<CubePriority> cubePriority = enumSetting("Priority", CubePriority.Distance, () -> mode.is(Mode.CubeCraftExclusive));
+    private final EnumSetting<CubeCombatMode> cubeCombatMode = enumSetting("Combat Mode", CubeCombatMode.OnePointNinePlus, () -> mode.is(Mode.CubeCraftExclusive));
+    private final DoubleSetting cubeRange = doubleSetting("Cube Range", 5.0, 3.0, 8.0, 0.1, () -> mode.is(Mode.CubeCraftExclusive));
+    private final DoubleSetting cubeBlockRange = doubleSetting("Block Range", 5.0, 3.0, 8.0, 0.1, () -> mode.is(Mode.CubeCraftExclusive));
+    private final DoubleSetting cubeWallRange = doubleSetting("Wall Range", 4.5, 0.0, 8.0, 0.1, () -> mode.is(Mode.CubeCraftExclusive));
+    private final DoubleSetting cubeRotationRange = doubleSetting("Rotation Range", 5.5, 3.0, 8.0, 0.1, () -> mode.is(Mode.CubeCraftExclusive));
+    private final EnumSetting<CubeAutoBlockMode> cubeAutoBlockMode = enumSetting("AutoBlock Mode", CubeAutoBlockMode.Fake, () -> mode.is(Mode.CubeCraftExclusive));
+    private final EnumSetting<CubeMovementFixMode> cubeMovementFixMode = enumSetting("MovementFix Mode", CubeMovementFixMode.None, () -> mode.is(Mode.CubeCraftExclusive));
+    private final BoolSetting cubeRayCast = boolSetting("Ray Cast", false, () -> mode.is(Mode.CubeCraftExclusive));
 
     private final BoolSetting heypixelKeepSprint = boolSetting("Heypixel KeepSprint", false);
 
@@ -133,6 +155,7 @@ public class KillAura extends Module {
     private boolean sprintCancelled;
     private int groundTicks;
     private final TimerUtils attackTimer = new TimerUtils();
+    private final TimerUtils cubeSwitchTimer = new TimerUtils();
 
     private enum AttackAttempt {
         ATTACKED,
@@ -143,6 +166,7 @@ public class KillAura extends Module {
     @Override
     protected void onEnable() {
         attackTimer.reset();
+        cubeSwitchTimer.reset();
     }
 
     @Override
@@ -153,6 +177,7 @@ public class KillAura extends Module {
         sprintCancelled = false;
         groundTicks = 0;
         attackTimer.reset();
+        cubeSwitchTimer.reset();
         DeobfESP.retainRisingEffects();
     }
 
@@ -170,6 +195,11 @@ public class KillAura extends Module {
 
         if (!esp.getValue() || !espMode.is(ESPMode.Deobf)) {
             DeobfESP.clear();
+        }
+
+        if (mode.is(Mode.CubeCraftExclusive)) {
+            tickCubeCraftExclusive();
+            return;
         }
 
         if (mc.player.isUsingItem() || mc.player.isBlocking()) return;
@@ -235,6 +265,65 @@ public class KillAura extends Module {
 
     private int getCps() {
         return MathUtils.getRandom(minCPS.getValue(), maxCPS.getValue());
+    }
+
+    private boolean isCubeCombat(CubeCombatMode combatMode) {
+        return mode.is(Mode.CubeCraftExclusive) && cubeCombatMode.is(combatMode);
+    }
+
+    private void tickCubeCraftExclusive() {
+        if (mc.player.isUsingItem() || mc.player.isBlocking()) return;
+
+        List<LivingEntity> targets = new ArrayList<>(Managers.TARGET.acquireTargets(TargetRequest.of(
+                cubeRotationRange.getValue(), 360.0f,
+                player.getValue(), mob.getValue(), animal.getValue(), villagers.getValue(), invisible.getValue(), 64
+        )));
+        targets.sort(cubeComparator());
+        if (targets.isEmpty()) {
+            target = null;
+            switchIndex = 0;
+            attackTimer.reset();
+            return;
+        }
+
+        if (targetMode.is(TargetMode.Switch)) {
+            if (switchIndex >= targets.size()) switchIndex = 0;
+            if (target == null || !targets.contains(target) || cubeSwitchTimer.passedMillise(cubeSwitchDelay.getValue())) {
+                target = targets.get(switchIndex++ % targets.size());
+                cubeSwitchTimer.reset();
+            }
+        } else {
+            target = targets.getFirst();
+        }
+
+        Managers.ROTATION.setRotations(RotationUtils.getRotationsToEntity(target), rotationSpeed.getValue().floatValue(), Priority.Medium);
+        if (keepSwing.getValue() && cubeCombatMode.is(CubeCombatMode.OnePointNinePlus)) mc.player.swinging = true;
+
+        boolean cooldownReady = cubeCombatMode.is(CubeCombatMode.OnePointEight) || mc.player.getAttackStrengthScale(0.5f) >= 1.0f;
+        if (cooldownReady && attackTimer.passedMillise(700.0 / getCps()) && canCubeAttack(target)) {
+            doAttack(target);
+            attackTimer.reset();
+        }
+    }
+
+    private boolean canCubeAttack(LivingEntity candidate) {
+        double distance = RotationUtils.getEyeDistanceToEntity(candidate);
+        double allowedRange = mc.player.hasLineOfSight(candidate) ? cubeRange.getValue() : cubeWallRange.getValue();
+        if (distance > allowedRange) return false;
+        if (!cubeRayCast.getValue()) return true;
+        HitResult hitResult = Managers.ROTATION.getHitResult();
+        return hitResult instanceof EntityHitResult entityHitResult && entityHitResult.getEntity() == candidate;
+    }
+
+    private Comparator<LivingEntity> cubeComparator() {
+        return switch (cubePriority.getValue()) {
+            case Health -> Comparator.comparingDouble(entity -> entity.getHealth() + entity.getAbsorptionAmount());
+            case Fov -> Comparator.comparingDouble(entity -> Math.abs(net.minecraft.util.Mth.wrapDegrees(
+                    RotationUtils.getRotationsToEntity(entity).getYaw() - mc.player.getYRot())));
+            case LivingTime -> Comparator.comparingInt((LivingEntity entity) -> entity.tickCount).reversed();
+            case Armor -> Comparator.comparingInt(LivingEntity::getArmorValue);
+            case Distance -> Comparator.comparingDouble(RotationUtils::getEyeDistanceToEntity);
+        };
     }
 
     private AttackAttempt clickTargets(List<LivingEntity> targets) {

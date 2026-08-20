@@ -740,7 +740,8 @@
         "mode": {
           "_value": "Mode",
           "onepointeight": "1.8",
-          "onepointnineplus": "1.9+"
+          "onepointnineplus": "1.9+",
+          "cubecraftexclusive": "CubeCraft Exclusive"
         },
         "target mode": {
           "_value": "Target Mode",
@@ -755,6 +756,38 @@
         "min cps": "Min CPS",
         "max cps": "Max CPS",
         "keep swing": "Keep Swing",
+        "switch delay": "Switch Delay",
+        "priority": {
+          "_value": "Priority",
+          "distance": "Distance",
+          "health": "Health",
+          "fov": "FOV",
+          "livingtime": "Living Time",
+          "armor": "Armor"
+        },
+        "combat mode": {
+          "_value": "Combat Mode",
+          "onepointeight": "1.8",
+          "onepointnineplus": "1.9+"
+        },
+        "cube range": "Range",
+        "block range": "Block Range",
+        "wall range": "Wall Range",
+        "rotation range": "Rotation Range",
+        "autoblock mode": {
+          "_value": "AutoBlock Mode",
+          "none": "None",
+          "fake": "Fake",
+          "useitem": "Use Item",
+          "vanilla": "Vanilla"
+        },
+        "movementfix mode": {
+          "_value": "MovementFix Mode",
+          "none": "None",
+          "silent": "Silent",
+          "strict": "Strict"
+        },
+        "ray cast": "Ray Cast",
         "heypixel keepsprint": "Heypixel KeepSprint",
         "player": "Player",
         "mob": "Mob",
@@ -1481,7 +1514,8 @@
           "_value": "Mode",
           "cancel": "Cancel",
           "legit": "Legit",
-          "grim": "Grim"
+          "grim": "Grim",
+          "cubecraft": "CubeCraft"
         },
         "grim mode": {
           "_value": "Grim Mode",
@@ -1492,6 +1526,8 @@
         "jump reset": "Jump Reset",
         "jump tick": "Jump Tick",
         "logging": "Logging",
+        "horizontal": "Horizontal",
+        "vertical": "Vertical",
         "server motion": "Server Motion",
         "explosion": "Explosion",
         "explosion only block": "Explosion Only Block",
