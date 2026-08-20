@@ -5,7 +5,6 @@ import tech.hakuri.graven.events.impl.AttackSlowDownEvent;
 import tech.hakuri.graven.events.impl.AttackYawEvent;
 import tech.hakuri.graven.events.impl.TravelEvent;
 import tech.hakuri.graven.modules.impl.movement.KeepSprint;
-import tech.hakuri.graven.modules.impl.combat.KillAura;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -13,6 +12,7 @@ import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.At.Shift;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static tech.hakuri.graven.Constants.mc;
@@ -44,24 +44,26 @@ public class MixinPlayer {
         }
     }
 
-    @Inject(method = "attack", at = @At("RETURN"))
-    private void onAfterAttack(Entity entity, CallbackInfo ci) {
-        if ((Player) (Object) this == mc.player && KillAura.INSTANCE.isHeypixelKeepSprintTransition()) {
-            return;
-        }
+    @Inject(
+            method = "causeExtraKnockback",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/player/Player;setSprinting(Z)V",
+                    shift = Shift.AFTER
+            )
+    )
+    private void applyCubeCraftKeepSprint(Entity entity, float knockbackAmount, Vec3 oldMovement, CallbackInfo ci) {
         KeepSprint keepSprint = KeepSprint.INSTANCE;
-        if ((Player) (Object) this == mc.player && keepSprint.isEnabled() && keepSprint.shouldKeepSprint()) {
-            // Re-enable sprint if vanilla attack stopped it
-            if (!mc.player.isSprinting()) {
-                mc.player.setSprinting(true);
-            }
-            // Apply custom slowdown factor (matching LeaderClient formula)
-            double slowdownPercent = keepSprint.slowdown.getValue().doubleValue() / 100.0;
-            if (slowdownPercent > 0.0) {
-                double customFactor = 0.6 + 0.4 * (1.0 - slowdownPercent);
-                mc.player.setDeltaMovement(mc.player.getDeltaMovement().multiply(customFactor, 1.0, customFactor));
-            }
-        }
+        if ((Player) (Object) this != mc.player || !keepSprint.isEnabled()) return;
+
+        double multiplier = 0.6 + 0.4 * keepSprint.motion.getValue();
+        Vec3 movement = mc.player.getDeltaMovement();
+        mc.player.setDeltaMovement(
+                movement.x / 0.6 * multiplier,
+                movement.y,
+                movement.z / 0.6 * multiplier
+        );
+        mc.player.setSprinting(true);
     }
 
 }

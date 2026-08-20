@@ -1299,13 +1299,9 @@
         "_value": "Keep Sprint",
         "mode": {
           "_value": "Mode",
-          "vanilla": "Vanilla",
-          "prediction": "Prediction"
+          "cubecraft": "CubeCraft"
         },
-        "slowdown": "Slowdown",
-        "ground only": "Ground Only",
-        "prediction": "Prediction",
-        "reach only": "Reach Only"
+        "motion": "Motion"
       },
       "movement fix": "Movement Fix",
       "no fall": {
