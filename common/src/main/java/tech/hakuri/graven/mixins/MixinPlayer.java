@@ -54,7 +54,7 @@ public class MixinPlayer {
     )
     private void applyCubeCraftKeepSprint(Entity entity, float knockbackAmount, Vec3 oldMovement, CallbackInfo ci) {
         KeepSprint keepSprint = KeepSprint.INSTANCE;
-        if ((Player) (Object) this != mc.player || !keepSprint.isEnabled()) return;
+        if ((Player) (Object) this != mc.player || !keepSprint.isEnabled() || !keepSprint.isCubeCraft()) return;
 
         double multiplier = 0.6 + 0.4 * keepSprint.motion.getValue();
         Vec3 movement = mc.player.getDeltaMovement();
@@ -64,6 +64,21 @@ public class MixinPlayer {
                 movement.z / 0.6 * multiplier
         );
         mc.player.setSprinting(true);
+    }
+
+    @Inject(method = "attack", at = @At("RETURN"))
+    private void applyLegacyKeepSprint(Entity entity, CallbackInfo ci) {
+        KeepSprint keepSprint = KeepSprint.INSTANCE;
+        if ((Player) (Object) this != mc.player || !keepSprint.isEnabled() || keepSprint.isCubeCraft() || !keepSprint.shouldKeepSprint()) return;
+
+        if (!mc.player.isSprinting()) {
+            mc.player.setSprinting(true);
+        }
+        double slowdownPercent = keepSprint.slowdown.getValue().doubleValue() / 100.0;
+        if (slowdownPercent > 0.0) {
+            double customFactor = 0.6 + 0.4 * (1.0 - slowdownPercent);
+            mc.player.setDeltaMovement(mc.player.getDeltaMovement().multiply(customFactor, 1.0, customFactor));
+        }
     }
 
 }

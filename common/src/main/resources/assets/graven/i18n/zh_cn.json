@@ -1299,9 +1299,15 @@
         "_value": "保持疾跑",
         "mode": {
           "_value": "模式",
+          "vanilla": "原版",
+          "prediction": "预测",
           "cubecraft": "CubeCraft"
         },
-        "motion": "速度系数"
+        "motion": "速度保留",
+        "slowdown": "减速",
+        "ground only": "仅地面",
+        "prediction": "预测",
+        "reach only": "仅攻击范围"
       },
       "movement fix": "移动修复",
       "no fall": {
